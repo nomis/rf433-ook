@@ -35,10 +35,10 @@ protected:
 	String code;
 	unsigned long start;
 	unsigned long stop;
-	unsigned long preSyncPeriod;
-	unsigned long postSyncPeriod;
-	unsigned long zeroBitPeriod;
-	unsigned long oneBitPeriod;
+	unsigned int preSyncPeriod;
+	unsigned int postSyncPeriod;
+	unsigned int zeroBitPeriod;
+	unsigned int oneBitPeriod;
 };
 
 #endif

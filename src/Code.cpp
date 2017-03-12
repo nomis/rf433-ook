@@ -18,16 +18,27 @@
  * Decode logic for HomeEasyV1 derived from code by Tim Hawes (2014).
  */
 
+#include <limits.h>
+
 #include "Code.hpp"
 
-Code::Code(const String &code_,
-		unsigned long start_, unsigned long stop_,
-		unsigned long preSyncPeriod_, unsigned long postSyncPeriod_,
-		unsigned long zeroBitPeriod_, unsigned long oneBitPeriod_)
-		: code(code_), start(start_), stop(stop_),
-		preSyncPeriod(preSyncPeriod_), postSyncPeriod(postSyncPeriod_),
-		zeroBitPeriod(zeroBitPeriod_), oneBitPeriod(oneBitPeriod_) {
-
+Code::Code(const String &code,
+		const unsigned long start, const unsigned long stop,
+		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
+		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod)
+		: code(code), start(start), stop(stop) {
+	if (preSyncPeriod <= UINT_MAX) {
+		this->preSyncPeriod = preSyncPeriod;
+	}
+	if (postSyncPeriod <= UINT_MAX) {
+		this->postSyncPeriod = postSyncPeriod;
+	}
+	if (zeroBitPeriod <= UINT_MAX) {
+		this->zeroBitPeriod = zeroBitPeriod;
+	}
+	if (oneBitPeriod <= UINT_MAX) {
+		this->oneBitPeriod = oneBitPeriod;
+	}
 }
 
 Code::~Code() {
@@ -46,14 +57,27 @@ size_t Code::printTo(Print &p) const {
 	n += p.print(stop);
 	n += p.print(",now: ");
 	n += p.print(micros());
-	n += p.print(",preSyncPeriod: ");
-	n += p.print(preSyncPeriod);
-	n += p.print(",postSyncPeriod: ");
-	n += p.print(postSyncPeriod);
-	n += p.print(",zeroBitPeriod: ");
-	n += p.print(zeroBitPeriod);
-	n += p.print(",oneBitPeriod: ");
-	n += p.print(oneBitPeriod);
+
+	if (preSyncPeriod) {
+		n += p.print(",preSyncPeriod: ");
+		n += p.print(preSyncPeriod);
+	}
+
+	if (postSyncPeriod) {
+		n += p.print(",postSyncPeriod: ");
+		n += p.print(postSyncPeriod);
+	}
+
+	if (zeroBitPeriod) {
+		n += p.print(",zeroBitPeriod: ");
+		n += p.print(zeroBitPeriod);
+	}
+
+	if (oneBitPeriod) {
+		n += p.print(",oneBitPeriod: ");
+		n += p.print(oneBitPeriod);
+	}
+
 	n += p.print(",decode: {");
 	n += printHomeEasyV1(first, p);
 	n += p.print("}}");
