@@ -51,7 +51,7 @@
 
 Receiver receiver;
 
-#define DEBUG_TIMING
+//#define DEBUG_TIMING
 #ifdef DEBUG_TIMING
 unsigned long timeHandlerSyncStandalone = 0;
 unsigned long timeHandlerSyncFollowing = 0;
