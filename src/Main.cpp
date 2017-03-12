@@ -16,8 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <limits.h>
+
 #include "Main.hpp"
 #include "Receiver.hpp"
+
+static int freeMemory() {
+	extern int __heap_start, *__brkval;
+	int v;
+	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
+static void checkFreeMemory() {
+	static int lowMemoryWatermark = INT_MAX;
+	int currentFreeMemory = freeMemory();
+
+	if (currentFreeMemory < lowMemoryWatermark) {
+		SerialUSB.print("# Free memory: ");
+		if (lowMemoryWatermark != INT_MAX) {
+			SerialUSB.print(lowMemoryWatermark);
+			SerialUSB.print(" -> ");
+		}
+		SerialUSB.println(currentFreeMemory);
+		lowMemoryWatermark = currentFreeMemory;
+	}
+}
 
 void setup() {
 	receiver.attach(RX_PIN);
@@ -27,6 +50,8 @@ void setup() {
 
 void loop() {
 	if (SerialUSB) {
+		checkFreeMemory();
+
 		receiver.printCode();
 	}
 
