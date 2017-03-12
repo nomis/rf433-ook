@@ -148,6 +148,8 @@ retry:
 				timeHandlerSyncFollowing = micros() - now;
 			}
 #endif
+		} else {
+			preSyncStandalone = true;
 		}
 	} else {
 		bool postSyncPresent = false;
