@@ -31,30 +31,33 @@ public:
 	void attach(int pin);
 	void printCode();
 
-protected:
-	static constexpr unsigned int MAX_CODES = 10;
+	// This must be a power of 2 or the calculations take significantly longer
+	static constexpr unsigned long DIVISOR = 1 << 3;
 
-	Code codes[MAX_CODES];
-	uint_fast8_t codeIndex = 0; /// The next code to be written
-
-private:
-	static void interruptHandler();
-	static void addCode(const Code &code);
-
-	// 1 period = 0-bit
-	static constexpr unsigned long MIN_ZERO_PERIOD_PERCENT = 40;
-	static constexpr unsigned long MAX_ZERO_PERIOD_PERCENT = 160;
-
-	// 3 periods = 1-bit
-	static constexpr unsigned long MIN_ONE_PERIOD_PERCENT = 230;
-	static constexpr unsigned long MAX_ONE_PERIOD_PERCENT = 370;
-
+	static constexpr unsigned long ZERO_PERIODS = 1;
+	static constexpr unsigned long ONE_PERIODS = 3;
 	static constexpr unsigned long SYNC_PERIODS = 31;
+
+	static constexpr unsigned long MIN_ZERO_DURATION = 4;
+	static constexpr unsigned long MAX_ZERO_DURATION = 12;
+	static constexpr unsigned long MIN_ONE_DURATION = 18;
+	static constexpr unsigned long MAX_ONE_DURATION = 30;
+
 	static constexpr unsigned long MIN_POST_SYNC_PERIODS = SYNC_PERIODS - 6;
 	static constexpr unsigned long MAX_POST_SYNC_PERIODS = SYNC_PERIODS + 4;
 
 	static constexpr unsigned long MIN_PERIOD_US = 120;
-	static constexpr unsigned long MAX_PERIOD_US = UINT_MAX * 100UL / MAX_ONE_PERIOD_PERCENT; // Must be able to fit duration calculation into maxOnePeriod
+
+protected:
+	static constexpr unsigned int MAX_CODES = 10;
+
+	Code codes[MAX_CODES];
+	uint_fast8_t codeReadIndex = 0;
+	uint_fast8_t codeWriteIndex = 0;
+
+private:
+	static void interruptHandler();
+	void addCode(const Code &code);
 } __attribute__((packed));
 
 extern Receiver receiver;

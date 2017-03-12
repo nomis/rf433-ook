@@ -31,27 +31,25 @@ public:
 	Code(const char *code,
 		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
 		unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
-		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
-		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
-		unsigned long allBitPeriod);
+		unsigned long preSyncPeriod, unsigned long postSyncTime,
+		unsigned long bitTotalTime, unsigned int bitPeriodCount);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 
 	static constexpr uint8_t MIN_LENGTH = 12;
-	static constexpr uint8_t MAX_LENGTH = 64;
+	static constexpr uint8_t MAX_LENGTH = 48;
 
 protected:
 	bool empty() const;
 	void clear();
 	size_t printHomeEasyV1(bool &first, Print &p) const __attribute__((warn_unused_result));
 
-	char code[MAX_LENGTH + 1] = { 0 };
+	char code[MAX_LENGTH + 1];
 	unsigned long duration;
-	unsigned int preSyncPeriod;
-	unsigned int postSyncPeriod;
-	unsigned int zeroBitPeriod;
-	unsigned int oneBitPeriod;
-	unsigned int allBitPeriod;
+	unsigned long preSyncPeriod;
+	unsigned long postSyncTime;
+	unsigned long bitTotalTime;
+	unsigned int bitPeriodCount;
 	unsigned int trailingBitCount : 2;
 	unsigned int trailingBitsValue : 3;
 	bool preSyncStandalone : 1;

@@ -18,42 +18,24 @@
  * Decode logic for HomeEasyV1 derived from code by Tim Hawes (2014).
  */
 
-#include <limits.h>
-
 #include "Code.hpp"
+#include "Receiver.hpp"
 
 Code::Code() {
 
 }
 
-Code::Code(const char *code,
+Code::Code(const char *code __attribute__((unused)),
 		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
 		const unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
-		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
-		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod,
-		const unsigned long allBitPeriod)
+		const unsigned long preSyncPeriod, const unsigned long postSyncTime,
+		unsigned long bitTotalTime, unsigned int bitPeriodCount)
 		: duration(duration),
-		trailingBitCount(trailingBitCount),
-		trailingBitsValue(trailingBitsValue),
-		preSyncStandalone(preSyncStandalone),
-		postSyncPresent(postSyncPresent) {
-	strncpy(this->code, code, sizeof(this->code));
-
-	if (preSyncPeriod <= UINT_MAX) {
-		this->preSyncPeriod = preSyncPeriod;
-	}
-	if (postSyncPeriod <= UINT_MAX) {
-		this->postSyncPeriod = postSyncPeriod;
-	}
-	if (zeroBitPeriod <= UINT_MAX) {
-		this->zeroBitPeriod = zeroBitPeriod;
-	}
-	if (oneBitPeriod <= UINT_MAX) {
-		this->oneBitPeriod = oneBitPeriod;
-	}
-	if (allBitPeriod <= UINT_MAX) {
-		this->allBitPeriod = allBitPeriod;
-	}
+		preSyncPeriod(preSyncPeriod), postSyncTime(postSyncTime),
+		bitTotalTime(bitTotalTime), bitPeriodCount(bitPeriodCount),
+		trailingBitCount(trailingBitCount), trailingBitsValue(trailingBitsValue),
+		preSyncStandalone(preSyncStandalone), postSyncPresent(postSyncPresent) {
+	memcpy(this->code, code, sizeof(this->code));
 }
 
 Code::~Code() {
@@ -115,24 +97,14 @@ size_t Code::printTo(Print &p) const {
 		n += p.print(preSyncPeriod);
 	}
 
-	if (postSyncPeriod) {
+	if (postSyncTime) {
 		n += p.print(",postSyncPeriod: ");
-		n += p.print(postSyncPeriod);
+		n += p.print(postSyncTime / Receiver::SYNC_PERIODS);
 	}
 
-	if (zeroBitPeriod) {
-		n += p.print(",zeroBitPeriod: ");
-		n += p.print(zeroBitPeriod);
-	}
-
-	if (oneBitPeriod) {
-		n += p.print(",oneBitPeriod: ");
-		n += p.print(oneBitPeriod);
-	}
-
-	if (allBitPeriod) {
-		n += p.print(",allBitPeriod: ");
-		n += p.print(allBitPeriod);
+	if (bitPeriodCount) {
+		n += p.print(",bitPeriod: ");
+		n += p.print(bitTotalTime / bitPeriodCount);
 	}
 
 	if (postSyncPresent) {

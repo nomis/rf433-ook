@@ -51,6 +51,14 @@
 
 Receiver receiver;
 
+#define DEBUG_TIMING
+#ifdef DEBUG_TIMING
+unsigned long timeHandlerSyncStandalone = 0;
+unsigned long timeHandlerSyncFollowing = 0;
+unsigned long timeHandlerZero = 0;
+unsigned long timeHandlerOne = 0;
+#endif
+
 Receiver::Receiver() {
 
 }
@@ -64,18 +72,34 @@ void Receiver::attach(int pin) {
 }
 
 struct ReceiverData {
-	unsigned short minZeroPeriod, maxZeroPeriod;
-	unsigned short minOnePeriod, maxOnePeriod;
 	unsigned long minSyncPeriod, maxSyncPeriod;
 	char code[Code::MAX_LENGTH + 1];
 	uint_fast8_t codeLength;
 	unsigned long start;
-	unsigned long preSyncPeriod;
-	unsigned long zeroBitPeriod, oneBitPeriod, allBitPeriod;
-	unsigned int zeroBitCount, oneBitCount, allBitCount;
+	unsigned int preSyncPeriod;
+	unsigned long bitTotalTime;
+	unsigned int bitPeriodCount;
 	int_fast8_t currentBit;
 	uint_fast8_t value;
 };
+
+// These take about 4µs each, so it's better to do them every time
+// than to add to the work required to process a sync event
+static inline unsigned long minZeroPeriod(const ReceiverData &data) {
+	return data.preSyncPeriod * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
+}
+
+static inline unsigned long maxZeroPeriod(const ReceiverData &data) {
+	return data.preSyncPeriod * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR;
+}
+
+static inline unsigned long minOnePeriod(const ReceiverData &data) {
+	return data.preSyncPeriod * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR;
+}
+
+static inline unsigned long maxOnePeriod(const ReceiverData &data) {
+	return data.preSyncPeriod * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
+}
 
 static inline void addBit(ReceiverData &data, uint_fast8_t bit) {
 	data.value |= bit << data.currentBit;
@@ -102,72 +126,68 @@ void Receiver::interruptHandler() {
 
 retry:
 	if (!sync) {
-		if (duration >= SYNC_PERIODS * MIN_PERIOD_US
-				&& duration <= SYNC_PERIODS * MAX_PERIOD_US) {
-			unsigned long period = duration / SYNC_PERIODS;
-
-			memset(&data, 0, sizeof(data));
-			data.start = last;
-			data.preSyncPeriod = period;
+		if (duration >= SYNC_PERIODS * MIN_PERIOD_US) {
+			data.codeLength = 0;
+			data.bitTotalTime = 0;
+			data.bitPeriodCount = 0;
+			data.value = 0;
 			data.currentBit = 3;
-
-			data.minZeroPeriod = period * MIN_ZERO_PERIOD_PERCENT / 100;
-			data.maxZeroPeriod = period * MAX_ZERO_PERIOD_PERCENT / 100;
-
-			data.minOnePeriod = period * MIN_ONE_PERIOD_PERCENT / 100;
-			data.maxOnePeriod = period * MAX_ONE_PERIOD_PERCENT / 100;
-
-			data.minSyncPeriod = period * MIN_POST_SYNC_PERIODS;
-			data.maxSyncPeriod = period * MAX_POST_SYNC_PERIODS;
-
+			data.start = last;
+			data.preSyncPeriod = duration / SYNC_PERIODS;
+			data.minSyncPeriod = data.preSyncPeriod * MIN_POST_SYNC_PERIODS;
+			data.maxSyncPeriod = data.preSyncPeriod * MAX_POST_SYNC_PERIODS;
 			sync = true;
+
+#ifdef DEBUG_TIMING
+			// The time taken for each of these is different, because
+			// when one message follows another we do more work by
+			// restarting the handler to reset and reinterpret the sync
+			if (preSyncStandalone) {
+				timeHandlerSyncStandalone = micros() - now;
+			} else {
+				timeHandlerSyncFollowing = micros() - now;
+			}
+#endif
 		}
 	} else {
-		unsigned long postSyncPeriod = 0;
 		bool postSyncPresent = false;
 
 		if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
-			postSyncPeriod = duration / SYNC_PERIODS;
 			postSyncPresent = true;
 		} else {
 			if (data.codeLength == sizeof(data.code) - 1) {
 				// Code too long
-			} else if (duration >= data.minZeroPeriod && duration <= data.maxZeroPeriod) {
-				addBit(data, 0);
-				data.zeroBitPeriod += duration;
-				data.zeroBitCount++;
-				data.allBitPeriod += duration;
-				data.allBitCount++;
-				goto done;
-			} else if (duration >= data.minOnePeriod && duration <= data.maxOnePeriod) {
-				addBit(data, 1);
-				data.oneBitPeriod += duration / 3;
-				data.oneBitCount++;
-				data.allBitPeriod += duration / 3;
-				data.allBitCount++;
-				goto done;
+			} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
+				if (duration <= maxZeroPeriod(data)) {
+					addBit(data, 0);
+					data.bitTotalTime += duration;
+					data.bitPeriodCount += ZERO_PERIODS;
+#ifdef DEBUG_TIMING
+					timeHandlerZero = micros() - now;
+#endif
+					goto done;
+				} else if (duration >= minOnePeriod(data)) {
+					addBit(data, 1);
+					data.bitTotalTime += duration;
+					data.bitPeriodCount += ONE_PERIODS;
+#ifdef DEBUG_TIMING
+					timeHandlerOne = micros() - now;
+#endif
+					goto done;
+				} else {
+					// Invalid duration
+				}
 			} else {
 				// Invalid duration
 			}
 		}
 
 		if (data.codeLength >= Code::MIN_LENGTH) {
-			if (data.zeroBitCount > 0) {
-				data.zeroBitPeriod /= data.zeroBitCount;
-			}
-
-			if (data.oneBitCount > 0) {
-				data.oneBitPeriod /= data.oneBitCount;
-			}
-
-			if (data.allBitCount > 0) {
-				data.allBitPeriod /= data.allBitCount;
-			}
-
 			data.code[data.codeLength] = 0;
-			addCode(Code(data.code, 3 - data.currentBit, data.value, now - data.start,
-				preSyncStandalone, postSyncPresent, data.preSyncPeriod, postSyncPeriod,
-				data.zeroBitPeriod, data.oneBitPeriod, data.allBitPeriod));
+
+			receiver.addCode(Code(data.code, 3 - data.currentBit, data.value, now - data.start,
+				preSyncStandalone, postSyncPresent, data.preSyncPeriod, duration,
+				data.bitTotalTime, data.bitPeriodCount));
 		} else {
 			// Code too short
 		}
@@ -183,25 +203,75 @@ done:
 }
 
 void Receiver::addCode(const Code &code) {
-	receiver.codes[receiver.codeIndex] = code;
-	receiver.codeIndex = (receiver.codeIndex + 1) % MAX_CODES;
+	if (!codes[codeWriteIndex].empty()) {
+		// assert(codeReadIndex == codeWriteIndex);
+
+		codeReadIndex++;
+		if (codeReadIndex >= MAX_CODES) {
+			codeReadIndex = 0;
+		}
+
+		// assert(!codes[codeReadIndex].empty());
+	}
+
+	codes[codeWriteIndex] = code;
+	codeWriteIndex++;
+	if (codeWriteIndex >= MAX_CODES) {
+		codeWriteIndex = 0;
+	}
 }
 
 void Receiver::printCode() {
 	noInterrupts();
+#ifdef DEBUG_TIMING
+	unsigned long timeRead = micros();
+#endif
 
-	for (uint_fast16_t n = 0; n < MAX_CODES; n++) {
-		// This won't work if `codeIndex + n` wraps before `% MAX_CODES` is applied
-		uint_fast8_t i = ((uint_fast16_t)codeIndex + n) % MAX_CODES;
-
-		if (!codes[i].empty()) {
-			Code code = codes[i];
-			codes[i].clear();
-			interrupts();
-
-			SerialUSB.println(code);
-			return;
+	if (!codes[codeReadIndex].empty()) {
+		Code code = codes[codeReadIndex];
+		codes[codeReadIndex].clear();
+		codeReadIndex++;
+		if (codeReadIndex >= MAX_CODES) {
+			codeReadIndex = 0;
 		}
+#ifdef DEBUG_TIMING
+		timeRead = micros() - timeRead;
+
+		unsigned long copyTimeHandlerSyncStandalone = timeHandlerSyncStandalone;
+		unsigned long copyTimeHandlerSyncFollowing = timeHandlerSyncFollowing;
+		unsigned long copyTimeHandlerZero = timeHandlerZero;
+		unsigned long copyTimeHandlerOne = timeHandlerOne;
+		timeHandlerSyncStandalone = 0;
+		timeHandlerSyncFollowing = 0;
+		timeHandlerZero = 0;
+		timeHandlerOne = 0;
+#endif
+		interrupts();
+
+		SerialUSB.println(code);
+
+#ifdef DEBUG_TIMING
+		if (copyTimeHandlerSyncStandalone != 0) {
+			SerialUSB.print("# Sync (standalone) time: ");
+			SerialUSB.println(copyTimeHandlerSyncStandalone);
+		}
+		if (copyTimeHandlerSyncFollowing != 0) {
+			SerialUSB.print("# Sync (following) time: ");
+			SerialUSB.println(copyTimeHandlerSyncFollowing);
+		}
+		if (copyTimeHandlerZero != 0) {
+			SerialUSB.print("# Zero bit time: ");
+			SerialUSB.println(copyTimeHandlerZero);
+		}
+		if (copyTimeHandlerOne != 0) {
+			SerialUSB.print("# One bit time: ");
+			SerialUSB.println(copyTimeHandlerOne);
+		}
+		SerialUSB.print("# Lookup and copy: ");
+		SerialUSB.println(timeRead);
+#endif
+
+		return;
 	}
 
 	interrupts();
