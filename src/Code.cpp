@@ -126,7 +126,8 @@ size_t Code::printTo(Print &p) const {
 
 	if (postSyncPresent) {
 		n += p.print(",decode: {");
-		n += printHomeEasyV1(first, p);
+		n += printHomeEasyV1A(first, p);
+		n += printHomeEasyV2A(first, p);
 		n += p.print('}');
 	}
 
@@ -140,15 +141,16 @@ size_t Code::printTo(Print &p) const {
 	return n;
 }
 
-size_t Code::printHomeEasyV1(bool &first, Print &p) const {
+size_t Code::printHomeEasyV1A(bool &first, Print &p) const {
 	size_t n = 0;
 	String decoded;
 	int8_t group = -1;
 	int8_t device = -1;
 	String action;
 
-	if (strlen(code) != 12 || trailingBitCount != 1 || trailingBitsValue != 0)
+	if (strlen(code) != 12 || trailingBitCount != 1 || trailingBitsValue != 0) {
 		goto out;
+	}
 
 	for (const char *c = code; *c; c++) {
 		switch (*c) {
@@ -193,7 +195,7 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 	} else if (action == "0020") {
 		action = "group off";
 	} else {
-		action = "unknown (" + action + ")";
+		action = "";
 	}
 
 	if (first) {
@@ -202,7 +204,7 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 		n += p.print(',');
 	}
 
-	n += p.print("homeEasyV1: {code: \"");
+	n += p.print("HomeEasyV1A: {code: \"");
 	n += p.print(decoded);
 	n += p.print('\"');
 	if (group >= 0) {
@@ -213,9 +215,85 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 		n += p.print(",device: ");
 		n += p.print(device);
 	}
+	if (action != "") {
+		n += p.print(",action: \"");
+		n += p.print(action);
+		n += p.print('\"');
+	}
+	n += p.print('}');
+
+out:
+	return n;
+}
+
+size_t Code::printHomeEasyV2A(bool &first, Print &p) const {
+	size_t n = 0;
+	size_t length = strlen(code);
+	String decoded;
+	uint32_t group = 0;
+	uint8_t device;
+	int8_t dimLevel = -1;
+	String action;
+
+	if ((length != 32 && length != 36) || (trailingBitCount & 0x1) != 1 || (trailingBitsValue & 0x3) != 0x0)
+		goto out;
+
+	for (const char *c = code; *c; c++) {
+		switch (*c) {
+		case '4':
+		case '0':
+			decoded += '0';
+			break;
+
+		case '5':
+		case '1':
+			decoded += '1';
+			break;
+
+		default:
+			goto out;
+		}
+	}
+
+	for (uint_fast8_t i = 0; i <= 25; i++) {
+		group |= (uint32_t)(uint8_t)(decoded[25 - i] - '0') << i;
+	}
+
+	action = (decoded[26] == '1' ? "group " : "");
+	action += (decoded[27] == '1' ? "on" : "off");
+
+	device = ((uint8_t)(decoded[28] - '0') << 3)
+		| ((uint8_t)(decoded[29] - '0') << 2)
+		| ((uint8_t)(decoded[30] - '0') << 1)
+		| (uint8_t)(decoded[31] - '0');
+
+	if (length == 36) {
+		dimLevel = ((uint8_t)(decoded[32] - '0') << 3)
+			| ((uint8_t)(decoded[33] - '0') << 2)
+			| ((uint8_t)(decoded[34] - '0') << 1)
+			| (uint8_t)(decoded[35] - '0');
+	}
+
+	if (first) {
+		first = false;
+	} else {
+		n += p.print(',');
+	}
+
+	n += p.print("HomeEasyV2A: {code: \"");
+	n += p.print(decoded);
+	n += p.print("\",group: ");
+	n += p.print(group);
+	n += p.print(",device: ");
+	n += p.print(device);
 	n += p.print(",action: \"");
 	n += p.print(action);
-	n += p.print("\"}");
+	n += p.print('\"');
+	if (dimLevel != -1) {
+		n += p.print(",dimLevel: ");
+		n += p.print(dimLevel * 67 / 10);
+	}
+	n += p.print('}');
 
 out:
 	return n;

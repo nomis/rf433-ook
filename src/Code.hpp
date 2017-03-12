@@ -43,7 +43,8 @@ public:
 protected:
 	bool empty() const;
 	void clear();
-	size_t printHomeEasyV1(bool &first, Print &p) const __attribute__((warn_unused_result));
+	size_t printHomeEasyV1A(bool &first, Print &p) const __attribute__((warn_unused_result));
+	size_t printHomeEasyV2A(bool &first, Print &p) const __attribute__((warn_unused_result));
 
 	char code[MAX_LENGTH + 1];
 	unsigned long duration;
