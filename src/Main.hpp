@@ -26,6 +26,7 @@ constexpr auto &output = SerialUSB;
 constexpr unsigned long OUTPUT_BAUD_RATE = 115200;
 
 // 433MHz OOK
+constexpr bool RX_ENABLED = true;
 constexpr int RX_PIN = 2;
 constexpr int TX_PIN = 10;
 

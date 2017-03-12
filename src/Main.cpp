@@ -43,7 +43,9 @@ static void checkFreeMemory() {
 }
 
 void setup() {
-	receiver.attach(RX_PIN);
+	if (RX_ENABLED) {
+		receiver.attach(RX_PIN);
+	}
 
 	output.begin(OUTPUT_BAUD_RATE);
 }
@@ -52,7 +54,9 @@ void loop() {
 	if (SerialUSB) {
 		checkFreeMemory();
 
-		receiver.printCode();
+		if (RX_ENABLED) {
+			receiver.printCode();
+		}
 	}
 
 	delay(20);
