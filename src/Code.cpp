@@ -137,8 +137,8 @@ size_t Code::printTo(Print &p) const {
 size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 	size_t n = 0;
 	String decoded;
-	uint8_t group;
-	uint8_t device;
+	int8_t group = -1;
+	int8_t device = -1;
 	String action;
 
 	if (strlen(code) != 12)
@@ -163,15 +163,19 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 		}
 	}
 
-	group = ((uint8_t)(decoded[0] - '0') << 3)
-		| ((uint8_t)(decoded[1] - '0') << 2)
-		| ((uint8_t)(decoded[2] - '0') << 1)
-		| (uint8_t)(decoded[3] - '0');
+	if (decoded.substring(0, 4).indexOf('2') == -1) {
+		group = ((uint8_t)(decoded[0] - '0') << 3)
+			| ((uint8_t)(decoded[1] - '0') << 2)
+			| ((uint8_t)(decoded[2] - '0') << 1)
+			| (uint8_t)(decoded[3] - '0');
+	}
 
-	device = ((uint8_t)(decoded[4] - '0') << 3)
-		| ((uint8_t)(decoded[5] - '0') << 2)
-		| ((uint8_t)(decoded[6] - '0') << 1)
-		| (uint8_t)(decoded[7] - '0');
+	if (decoded.substring(4, 8).indexOf('2') == -1) {
+		device = ((uint8_t)(decoded[4] - '0') << 3)
+			| ((uint8_t)(decoded[5] - '0') << 2)
+			| ((uint8_t)(decoded[6] - '0') << 1)
+			| (uint8_t)(decoded[7] - '0');
+	}
 
 	action = decoded.substring(8);
 	if (action == "0111") {
@@ -194,10 +198,15 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 
 	n += p.print("homeEasyV1: {code: \"");
 	n += p.print(decoded);
-	n += p.print("\",group: ");
-	n += p.print(group);
-	n += p.print(",device: ");
-	n += p.print(device);
+	n += p.print('\"');
+	if (group >= 0) {
+		n += p.print(",group: ");
+		n += p.print(group);
+	}
+	if (device >= 0) {
+		n += p.print(",device: ");
+		n += p.print(device);
+	}
 	n += p.print(",action: \"");
 	n += p.print(action);
 	n += p.print("\"}");
