@@ -184,20 +184,20 @@ retry:
 				if (data.zeroTime == 0) {
 					// Assume first duration is 0-bit
 					data.zeroTime = duration;
-				} else if (duration > data.zeroTime * 2) {
+				} else if (duration >= data.zeroTime * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
 					if (data.oneTime == 0) {
-						// If this bit is more than 2x the duration of the currently
-						// known 0-bit, then it is the duration of the 1-bit
+						// This bit looks like a 1-bit relative to the duration of the
+						// currently known 0-bit, this is now the duration of the 1-bit
 						data.oneTime = duration;
 					} else {
 						// This looks like another 1-bit, average it into the timing
 						data.oneTime += duration;
 						data.oneTime /= 2;
 					}
-				} else if (duration < data.zeroTime / 2) {
-					// If this bit is less than 1/2th the duration of the currently
-					// known 0-bit then the previous bits were 1-bits and it is the
-					// duration of the 0-bit
+				} else if (data.zeroTime >= duration * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
+					// If the currently known 0-bit looks like a 1-bit relative to
+					// this bit then the previous bits were 1-bits and this is now
+					// the duration of the 0-bit
 					data.oneTime = data.zeroTime;
 					data.zeroTime = duration;
 				} else {

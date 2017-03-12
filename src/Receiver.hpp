@@ -31,7 +31,9 @@ public:
 	void attach(int pin);
 	void printCode();
 
-	// This must be a power of 2 or the calculations take significantly longer
+	// All durations are specified as the numerator of a fractional number
+	// with the following denominator (divisor), which must be a power of 2
+	// or the calculations will take significantly longer
 	static constexpr unsigned long DIVISOR = 1 << 3;
 
 	// Relative duration compared to sampled bit periods
@@ -46,6 +48,9 @@ public:
 	static constexpr unsigned long MAX_SAMPLES = 16;
 
 protected:
+	// Minimum relative size of a 1-bit compared to a 0-bit
+	static constexpr unsigned long RELATIVE_DURATION = 14;
+
 	// Relative duration compared to pre sync duration
 	static constexpr unsigned long MIN_POST_SYNC_DURATION = 6;
 	static constexpr unsigned long MAX_POST_SYNC_DURATION = 32;
