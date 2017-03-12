@@ -22,12 +22,14 @@
 
 #include "Code.hpp"
 
-Code::Code(const String &code,
+Code::Code(const char *code,
 		const unsigned long start, const unsigned long stop,
 		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
 		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod,
 		const unsigned long allBitPeriod)
-		: code(code), start(start), stop(stop) {
+		: start(start), stop(stop) {
+	strncpy(this->code, code, sizeof(this->code));
+
 	if (preSyncPeriod <= UINT_MAX) {
 		this->preSyncPeriod = preSyncPeriod;
 	}
@@ -101,11 +103,11 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 	uint8_t device;
 	String action;
 
-	if (code.length() != 12)
+	if (strlen(code) != 12)
 		goto out;
 
-	for (char c : code) {
-		switch (c) {
+	for (const char *c = code; *c; c++) {
+		switch (*c) {
 		case '5':
 			decoded += '0';
 			break;

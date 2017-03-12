@@ -23,17 +23,20 @@
 
 class Code: public Printable {
 public:
-	Code(const String &code, unsigned long start, unsigned long stop,
+	Code(const char *code, unsigned long start, unsigned long stop,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
 		unsigned long allBitPeriod);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 
+	static constexpr uint8_t MIN_LENGTH = 12;
+	static constexpr uint8_t MAX_LENGTH = 64;
+
 protected:
 	size_t printHomeEasyV1(bool &first, Print &p) const __attribute__((warn_unused_result));
 
-	String code;
+	char code[MAX_LENGTH + 1] = { 0 };
 	unsigned long start;
 	unsigned long stop;
 	unsigned int preSyncPeriod;

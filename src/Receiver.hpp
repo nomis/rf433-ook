@@ -41,7 +41,7 @@ protected:
 
 private:
 	static void interruptHandler();
-	static void addCode(const String &code, unsigned long start, unsigned long stop,
+	static void addCode(const char *code, unsigned long start, unsigned long stop,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
 		unsigned long allBitPeriod);
@@ -50,8 +50,6 @@ private:
 
 	static constexpr unsigned long MIN_PERIOD_US = 120;
 	static constexpr unsigned int SYNC_CYCLES = 31;
-	static constexpr unsigned int MIN_LENGTH = 12;
-	static constexpr unsigned int MAX_LENGTH = 64;
 };
 
 extern Receiver receiver;
