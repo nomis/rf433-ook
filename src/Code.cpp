@@ -28,13 +28,15 @@ Code::Code() {
 
 Code::Code(const char *code,
 		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
-		const unsigned long duration,
+		const unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
 		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
 		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod,
 		const unsigned long allBitPeriod)
-		: trailingBitCount(trailingBitCount),
+		: duration(duration),
+		trailingBitCount(trailingBitCount),
 		trailingBitsValue(trailingBitsValue),
-		duration(duration) {
+		preSyncStandalone(preSyncStandalone),
+		postSyncPresent(postSyncPresent) {
 	strncpy(this->code, code, sizeof(this->code));
 
 	if (preSyncPeriod <= UINT_MAX) {
@@ -101,6 +103,10 @@ size_t Code::printTo(Print &p) const {
 		n += p.print('+');
 		n += p.print(packedTrailingBits);
 	}
+	n += p.print("\",preSync: \"");
+	n += p.print(preSyncStandalone ? "standalone" : "following");
+	n += p.print("\",postSync: \"");
+	n += p.print(postSyncPresent ? "present" : "missing");
 	n += p.print("\",duration: ");
 	n += p.print(duration);
 
@@ -129,9 +135,18 @@ size_t Code::printTo(Print &p) const {
 		n += p.print(allBitPeriod);
 	}
 
-	n += p.print(",decode: {");
-	n += printHomeEasyV1(first, p);
-	n += p.print("}}");
+	if (postSyncPresent) {
+		n += p.print(",decode: {");
+		n += printHomeEasyV1(first, p);
+		n += p.print('}');
+	}
+
+	n += p.print('}');
+
+#if 0
+	n += p.print(" # ");
+	n += p.print(sizeof(Code));
+#endif
 
 	return n;
 }

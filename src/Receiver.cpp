@@ -85,6 +85,7 @@ void Receiver::interruptHandler() {
 	static char code[Code::MAX_LENGTH + 1];
 	static uint_fast8_t codeLength;
 	static unsigned long start, stop;
+	static bool preSyncStandalone = true;
 	static unsigned long preSyncPeriod, postSyncPeriod;
 	static unsigned long zeroBitPeriod, oneBitPeriod, allBitPeriod;
 	static unsigned int zeroBitCount, oneBitCount, allBitCount;
@@ -115,30 +116,11 @@ retry:
 			maxSyncPeriod = period * (SYNC_CYCLES + 4);
 		}
 	} else {
+		bool postSyncPresent = false;
+
 		if (duration >= minSyncPeriod && duration <= maxSyncPeriod) {
 			postSyncPeriod = duration / SYNC_CYCLES;
-			stop = now;
-
-			if (codeLength >= Code::MIN_LENGTH) {
-				if (zeroBitCount > 0) {
-					zeroBitPeriod /= zeroBitCount;
-				}
-
-				if (oneBitCount > 0) {
-					oneBitPeriod /= oneBitCount;
-				}
-
-				if (allBitCount > 0) {
-					allBitPeriod /= allBitCount;
-				}
-
-				code[codeLength] = 0;
-				addCode(Code(code, 3 - currentBit, value,
-					stop - start, preSyncPeriod, postSyncPeriod,
-					zeroBitPeriod, oneBitPeriod, allBitPeriod));
-			} else {
-				// Code too short
-			}
+			postSyncPresent = true;
 		} else {
 			if (codeLength == sizeof(code) - 1) {
 				// Code too long
@@ -161,8 +143,32 @@ retry:
 			}
 		}
 
+		if (codeLength >= Code::MIN_LENGTH) {
+			stop = now;
+
+			if (zeroBitCount > 0) {
+				zeroBitPeriod /= zeroBitCount;
+			}
+
+			if (oneBitCount > 0) {
+				oneBitPeriod /= oneBitCount;
+			}
+
+			if (allBitCount > 0) {
+				allBitPeriod /= allBitCount;
+			}
+
+			code[codeLength] = 0;
+			addCode(Code(code, 3 - currentBit, value, stop - start,
+				preSyncStandalone, postSyncPresent, preSyncPeriod, postSyncPeriod,
+				zeroBitPeriod, oneBitPeriod, allBitPeriod));
+		} else {
+			// Code too short
+		}
+
 		// Restart, reusing the current sync duration
 		sync = false;
+		preSyncStandalone = !postSyncPresent;
 		goto retry;
 	}
 
