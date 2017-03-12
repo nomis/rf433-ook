@@ -147,7 +147,7 @@ size_t Code::printHomeEasyV1(bool &first, Print &p) const {
 	int8_t device = -1;
 	String action;
 
-	if (strlen(code) != 12)
+	if (strlen(code) != 12 || trailingBitCount != 1 || trailingBitsValue != 0)
 		goto out;
 
 	for (const char *c = code; *c; c++) {
