@@ -79,8 +79,8 @@ static void addBit(char *code, uint_fast8_t &codeLength, int_fast8_t &currentBit
 void Receiver::interruptHandler() {
 	static unsigned long last = 0;
 	static bool sync = false;
-	static unsigned long min1Period, max1Period;
-	static unsigned long min3Period, max3Period;
+	static unsigned long minZeroPeriod, maxZeroPeriod;
+	static unsigned long minOnePeriod, maxOnePeriod;
 	static unsigned long minSyncPeriod, maxSyncPeriod;
 	static char code[Code::MAX_LENGTH + 1];
 	static uint_fast8_t codeLength;
@@ -108,10 +108,14 @@ retry:
 			value = 0;
 			sync = true;
 
-			min1Period = period * 4 / 10;
-			max1Period = period * 16 / 10;
-			min3Period = period * 23 / 10;
-			max3Period = period * 37 / 10;
+			// 1 period = 0-bit
+			minZeroPeriod = period * 4 / 10;
+			maxZeroPeriod = period * 16 / 10;
+
+			// 3 period = 1-bit
+			minOnePeriod = period * 23 / 10;
+			maxOnePeriod = period * 37 / 10;
+
 			minSyncPeriod = period * (SYNC_CYCLES - 6);
 			maxSyncPeriod = period * (SYNC_CYCLES + 4);
 		}
@@ -124,14 +128,14 @@ retry:
 		} else {
 			if (codeLength == sizeof(code) - 1) {
 				// Code too long
-			} else if (duration >= min1Period && duration <= max1Period) {
+			} else if (duration >= minZeroPeriod && duration <= maxZeroPeriod) {
 				addBit(code, codeLength, currentBit, value, 0);
 				zeroBitPeriod += duration;
 				zeroBitCount++;
 				allBitPeriod += duration;
 				allBitCount++;
 				goto done;
-			} else if (duration >= min3Period && duration <= max3Period) {
+			} else if (duration >= minOnePeriod && duration <= maxOnePeriod) {
 				addBit(code, codeLength, currentBit, value, 1);
 				oneBitPeriod += duration / 3;
 				oneBitCount++;
