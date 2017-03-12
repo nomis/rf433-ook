@@ -121,8 +121,18 @@ retry:
 				stop = now;
 
 				if (code.length() >= MIN_LENGTH) {
+					if (zeroBitCount > 0) {
+						zeroBitPeriod /= zeroBitCount;
+					}
+
+					if (oneBitCount > 0) {
+						oneBitPeriod /= oneBitCount;
+					}
+
 					addCode(code, start, stop, preSyncPeriod, postSyncPeriod,
-						zeroBitPeriod / zeroBitCount, oneBitPeriod / oneBitCount);
+						zeroBitPeriod, oneBitPeriod);
+				} else {
+					// Code too short
 				}
 			} else {
 				// Sync too early
