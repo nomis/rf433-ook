@@ -25,7 +25,18 @@ Code::Code() {
 
 }
 
-Code::Code(const char *code __attribute__((unused)),
+template <size_t length>
+void memcpy_unrolled(char *dst, const char *src) {
+	*dst = *src;
+	memcpy_unrolled<length - 1>(dst + 1, src + 1);
+}
+
+template <>
+void memcpy_unrolled<0>(char *dst __attribute__((unused)), const char *src __attribute__((unused))) {
+
+}
+
+Code::Code(const char *code,
 		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
 		const unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
 		const unsigned long preSyncPeriod, const unsigned long postSyncTime,
@@ -35,7 +46,7 @@ Code::Code(const char *code __attribute__((unused)),
 		bitTotalTime(bitTotalTime), bitPeriodCount(bitPeriodCount),
 		trailingBitCount(trailingBitCount), trailingBitsValue(trailingBitsValue),
 		preSyncStandalone(preSyncStandalone), postSyncPresent(postSyncPresent) {
-	memcpy(this->code, code, sizeof(this->code));
+	memcpy_unrolled<sizeof(this->code)>(this->code, code);
 }
 
 Code::~Code() {
