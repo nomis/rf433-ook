@@ -43,7 +43,8 @@ private:
 	static void interruptHandler();
 	static void addCode(const String &code, unsigned long start, unsigned long stop,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
-		unsigned long zeroBitPeriod, unsigned long oneBitPeriod);
+		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
+		unsigned long allBitPeriod);
 
 	static constexpr unsigned int MAX_CODES = 20;
 

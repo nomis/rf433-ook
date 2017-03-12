@@ -25,7 +25,8 @@
 Code::Code(const String &code,
 		const unsigned long start, const unsigned long stop,
 		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
-		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod)
+		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod,
+		const unsigned long allBitPeriod)
 		: code(code), start(start), stop(stop) {
 	if (preSyncPeriod <= UINT_MAX) {
 		this->preSyncPeriod = preSyncPeriod;
@@ -38,6 +39,9 @@ Code::Code(const String &code,
 	}
 	if (oneBitPeriod <= UINT_MAX) {
 		this->oneBitPeriod = oneBitPeriod;
+	}
+	if (allBitPeriod <= UINT_MAX) {
+		this->allBitPeriod = allBitPeriod;
 	}
 }
 
@@ -76,6 +80,11 @@ size_t Code::printTo(Print &p) const {
 	if (oneBitPeriod) {
 		n += p.print(",oneBitPeriod: ");
 		n += p.print(oneBitPeriod);
+	}
+
+	if (allBitPeriod) {
+		n += p.print(",allBitPeriod: ");
+		n += p.print(allBitPeriod);
 	}
 
 	n += p.print(",decode: {");

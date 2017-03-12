@@ -85,8 +85,8 @@ void Receiver::interruptHandler() {
 	static String code;
 	static unsigned long start, stop;
 	static unsigned long preSyncPeriod, postSyncPeriod;
-	static unsigned long zeroBitPeriod, oneBitPeriod;
-	static unsigned int zeroBitCount, oneBitCount;
+	static unsigned long zeroBitPeriod, oneBitPeriod, allBitPeriod;
+	static unsigned int zeroBitCount, oneBitCount, allBitCount;
 	static int_fast8_t currentBit;
 	static uint_fast8_t value;
 	unsigned long now = micros();
@@ -100,8 +100,8 @@ retry:
 			start = last;
 			code = "";
 			preSyncPeriod = period;
-			zeroBitPeriod = oneBitPeriod = 0;
-			zeroBitCount = oneBitCount = 0;
+			zeroBitPeriod = oneBitPeriod = allBitPeriod = 0;
+			zeroBitCount = oneBitCount = allBitCount = 0;
 			currentBit = 3;
 			value = 0;
 			sync = true;
@@ -129,8 +129,12 @@ retry:
 						oneBitPeriod /= oneBitCount;
 					}
 
+					if (allBitCount > 0) {
+						allBitPeriod /= allBitCount;
+					}
+
 					addCode(code, start, stop, preSyncPeriod, postSyncPeriod,
-						zeroBitPeriod, oneBitPeriod);
+						zeroBitPeriod, oneBitPeriod, allBitPeriod);
 				} else {
 					// Code too short
 				}
@@ -144,11 +148,15 @@ retry:
 				addBit(code, currentBit, value, 0);
 				zeroBitPeriod += duration;
 				zeroBitCount++;
+				allBitPeriod += duration;
+				allBitCount++;
 				goto done;
 			} else if (duration >= min3Period && duration <= max3Period) {
 				addBit(code, currentBit, value, 1);
 				oneBitPeriod += duration / 3;
 				oneBitCount++;
+				allBitPeriod += duration / 3;
+				allBitCount++;
 				goto done;
 			} else {
 				// Invalid duration
@@ -167,13 +175,15 @@ done:
 void Receiver::addCode(const String &code,
 		unsigned long start, unsigned long stop,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
-		unsigned long zeroBitPeriod, unsigned long oneBitPeriod) {
+		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
+		unsigned long allBitPeriod) {
 	if (receiver.codes.size() == MAX_CODES) {
 		receiver.codes.pop_front();
 	}
 
 	receiver.codes.push_back({code, start, stop,
-		preSyncPeriod, postSyncPeriod, zeroBitPeriod, oneBitPeriod});
+		preSyncPeriod, postSyncPeriod,
+		zeroBitPeriod, oneBitPeriod, allBitPeriod});
 }
 
 void Receiver::printCode() {

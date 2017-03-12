@@ -25,7 +25,8 @@ class Code: public Printable {
 public:
 	Code(const String &code, unsigned long start, unsigned long stop,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
-		unsigned long zeroBitPeriod, unsigned long oneBitPeriod);
+		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
+		unsigned long allBitPeriod);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 
@@ -39,6 +40,7 @@ protected:
 	unsigned int postSyncPeriod;
 	unsigned int zeroBitPeriod;
 	unsigned int oneBitPeriod;
+	unsigned int allBitPeriod;
 };
 
 #endif
