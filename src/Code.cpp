@@ -27,11 +27,14 @@ Code::Code() {
 }
 
 Code::Code(const char *code,
+		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
 		const unsigned long duration,
 		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
 		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod,
 		const unsigned long allBitPeriod)
-		: duration(duration) {
+		: trailingBitCount(trailingBitCount),
+		trailingBitsValue(trailingBitsValue),
+		duration(duration) {
 	strncpy(this->code, code, sizeof(this->code));
 
 	if (preSyncPeriod <= UINT_MAX) {
@@ -66,9 +69,38 @@ void Code::clear() {
 size_t Code::printTo(Print &p) const {
 	size_t n = 0;
 	bool first = true;
+	char packedTrailingBits;
+
+	// Re-pack the trailing bits for shorter output
+	switch (trailingBitCount) {
+	case 3:
+		packedTrailingBits = 0x8 | (trailingBitsValue & 0x7);
+		break;
+
+	case 2:
+		packedTrailingBits = 0x4 | (trailingBitsValue & 0x3);
+		break;
+
+	case 1:
+		packedTrailingBits = 0x2 | (trailingBitsValue & 0x1);
+		break;
+
+	case 0:
+	default:
+		packedTrailingBits = 0;
+		break;
+	}
+
+	packedTrailingBits = (packedTrailingBits < 10)
+			? (char)('0' + packedTrailingBits)
+			: (char)('A' + (packedTrailingBits - 10));
 
 	n += p.print("{code: \"");
 	n += p.print(code);
+	if (packedTrailingBits != 0) {
+		n += p.print('+');
+		n += p.print(packedTrailingBits);
+	}
 	n += p.print("\",duration: ");
 	n += p.print(duration);
 

@@ -28,7 +28,9 @@ class Code: public Printable {
 
 public:
 	Code();
-	Code(const char *code, unsigned long duration,
+	Code(const char *code,
+		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
+		unsigned long duration,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
 		unsigned long allBitPeriod);
@@ -44,6 +46,8 @@ protected:
 	size_t printHomeEasyV1(bool &first, Print &p) const __attribute__((warn_unused_result));
 
 	char code[MAX_LENGTH + 1] = { 0 };
+	uint8_t trailingBitCount : 4;
+	uint8_t trailingBitsValue : 4;
 	unsigned long duration;
 	unsigned int preSyncPeriod;
 	unsigned int postSyncPeriod;

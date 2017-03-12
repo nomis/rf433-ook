@@ -38,10 +38,7 @@ protected:
 
 private:
 	static void interruptHandler();
-	static void addCode(const char *code, unsigned long start, unsigned long stop,
-		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
-		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
-		unsigned long allBitPeriod);
+	static void addCode(const Code &code);
 
 	static constexpr unsigned long MIN_PERIOD_US = 120;
 	static constexpr unsigned int SYNC_CYCLES = 31;

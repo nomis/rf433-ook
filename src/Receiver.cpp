@@ -116,32 +116,28 @@ retry:
 		}
 	} else {
 		if (duration >= minSyncPeriod && duration <= maxSyncPeriod) {
-			// Must receive an extra 0 bit immediately before sync
-			if (currentBit == 2 && value == 0) {
-				postSyncPeriod = duration / SYNC_CYCLES;
-				stop = now;
+			postSyncPeriod = duration / SYNC_CYCLES;
+			stop = now;
 
-				if (codeLength >= Code::MIN_LENGTH) {
-					if (zeroBitCount > 0) {
-						zeroBitPeriod /= zeroBitCount;
-					}
-
-					if (oneBitCount > 0) {
-						oneBitPeriod /= oneBitCount;
-					}
-
-					if (allBitCount > 0) {
-						allBitPeriod /= allBitCount;
-					}
-
-					code[codeLength] = 0;
-					addCode(code, start, stop, preSyncPeriod, postSyncPeriod,
-						zeroBitPeriod, oneBitPeriod, allBitPeriod);
-				} else {
-					// Code too short
+			if (codeLength >= Code::MIN_LENGTH) {
+				if (zeroBitCount > 0) {
+					zeroBitPeriod /= zeroBitCount;
 				}
+
+				if (oneBitCount > 0) {
+					oneBitPeriod /= oneBitCount;
+				}
+
+				if (allBitCount > 0) {
+					allBitPeriod /= allBitCount;
+				}
+
+				code[codeLength] = 0;
+				addCode(Code(code, 3 - currentBit, value,
+					stop - start, preSyncPeriod, postSyncPeriod,
+					zeroBitPeriod, oneBitPeriod, allBitPeriod));
 			} else {
-				// Sync too early
+				// Code too short
 			}
 		} else {
 			if (codeLength == sizeof(code) - 1) {
@@ -174,15 +170,8 @@ done:
 	last = now;
 }
 
-void Receiver::addCode(const char *code,
-		unsigned long start, unsigned long stop,
-		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
-		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
-		unsigned long allBitPeriod) {
-	receiver.codes[receiver.codeIndex] = Code(code, stop - start,
-		preSyncPeriod, postSyncPeriod,
-		zeroBitPeriod, oneBitPeriod, allBitPeriod);
-
+void Receiver::addCode(const Code &code) {
+	receiver.codes[receiver.codeIndex] = code;
 	receiver.codeIndex = (receiver.codeIndex + 1) % MAX_CODES;
 }
 
