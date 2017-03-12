@@ -34,21 +34,28 @@ public:
 	// This must be a power of 2 or the calculations take significantly longer
 	static constexpr unsigned long DIVISOR = 1 << 3;
 
-	static constexpr unsigned long ZERO_PERIODS = 1;
-	static constexpr unsigned long ONE_PERIODS = 3;
-	static constexpr unsigned long SYNC_PERIODS = 31;
-
+	// Relative duration compared to sampled bit periods
 	static constexpr unsigned long MIN_ZERO_DURATION = 4;
 	static constexpr unsigned long MAX_ZERO_DURATION = 12;
-	static constexpr unsigned long MIN_ONE_DURATION = 18;
-	static constexpr unsigned long MAX_ONE_DURATION = 30;
+	static constexpr unsigned long MIN_ONE_DURATION = 4;
+	static constexpr unsigned long MAX_ONE_DURATION = 12;
 
-	static constexpr unsigned long MIN_POST_SYNC_PERIODS = SYNC_PERIODS - 6;
-	static constexpr unsigned long MAX_POST_SYNC_PERIODS = SYNC_PERIODS + 4;
-
-	static constexpr unsigned long MIN_PERIOD_US = 120;
+	// Sample bits until at least this many (to get the best average duration)
+	static constexpr unsigned long MIN_SAMPLES = 6;
+	// Continue sampling until this many bits (if the 1-bit duration is still unknown)
+	static constexpr unsigned long MAX_SAMPLES = 16;
 
 protected:
+	// Relative duration compared to pre sync duration
+	static constexpr unsigned long MIN_POST_SYNC_DURATION = 6;
+	static constexpr unsigned long MAX_POST_SYNC_DURATION = 32;
+
+	// Minimum time for an initial sync or processing will be ignored
+	static constexpr unsigned long MIN_PRE_SYNC_US = 2000;
+
+	// Minimum time for a 0-bit or processing will abort
+	static constexpr unsigned long MIN_PERIOD_US = 100;
+
 	static constexpr unsigned int MAX_CODES = 10;
 
 	Code codes[MAX_CODES];

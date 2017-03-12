@@ -31,8 +31,9 @@ public:
 	Code(const char *code,
 		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
 		unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
-		unsigned long preSyncPeriod, unsigned long postSyncTime,
-		unsigned long bitTotalTime, unsigned int bitPeriodCount);
+		unsigned long preSyncTime, unsigned long postSyncTime,
+		unsigned long zeroBitTotalTime, unsigned int zeroBitCount,
+		unsigned long oneBitTotalTime, unsigned int oneBitCount);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 
@@ -46,10 +47,12 @@ protected:
 
 	char code[MAX_LENGTH + 1];
 	unsigned long duration;
-	unsigned long preSyncPeriod;
+	unsigned long preSyncTime;
 	unsigned long postSyncTime;
-	unsigned long bitTotalTime;
-	unsigned int bitPeriodCount;
+	unsigned long zeroBitTotalTime;
+	unsigned int zeroBitCount;
+	unsigned long oneBitTotalTime;
+	unsigned int oneBitCount;
 	unsigned int trailingBitCount : 2;
 	unsigned int trailingBitsValue : 3;
 	bool preSyncStandalone : 1;

@@ -57,6 +57,7 @@ unsigned long timeHandlerSyncStandalone = 0;
 unsigned long timeHandlerSyncFollowing = 0;
 unsigned long timeHandlerZero = 0;
 unsigned long timeHandlerOne = 0;
+unsigned long timeHandlerSampleComplete = 0;
 #endif
 
 Receiver::Receiver() {
@@ -72,33 +73,46 @@ void Receiver::attach(int pin) {
 }
 
 struct ReceiverData {
+	// Sampling/timing
+	unsigned long bitSampleTimes[Receiver::MAX_SAMPLES];
+	uint_fast8_t sampleCount;
+	unsigned long zeroTime;
+	unsigned long oneTime;
+	bool sampleComplete;
 	unsigned long minSyncPeriod, maxSyncPeriod;
+
+	// Message
 	char code[Code::MAX_LENGTH + 1];
 	uint_fast8_t codeLength;
 	unsigned long start;
-	unsigned int preSyncPeriod;
-	unsigned long bitTotalTime;
-	unsigned int bitPeriodCount;
 	int_fast8_t currentBit;
 	uint_fast8_t value;
+
+	// Statistics
+	unsigned long preSyncTime;
+	uint_fast8_t onePeriods;
+	unsigned long zeroBitTotalTime;
+	unsigned int zeroBitCount;
+	unsigned long oneBitTotalTime;
+	unsigned int oneBitCount;
 };
 
 // These take about 4µs each, so it's better to do them every time
 // than to add to the work required to process a sync event
 static inline unsigned long minZeroPeriod(const ReceiverData &data) {
-	return data.preSyncPeriod * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
+	return data.zeroTime * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
 }
 
 static inline unsigned long maxZeroPeriod(const ReceiverData &data) {
-	return data.preSyncPeriod * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR;
+	return data.zeroTime * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR;
 }
 
 static inline unsigned long minOnePeriod(const ReceiverData &data) {
-	return data.preSyncPeriod * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR;
+	return data.oneTime * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR;
 }
 
 static inline unsigned long maxOnePeriod(const ReceiverData &data) {
-	return data.preSyncPeriod * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
+	return data.oneTime * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
 }
 
 static inline void addBit(ReceiverData &data, uint_fast8_t bit) {
@@ -126,16 +140,22 @@ void Receiver::interruptHandler() {
 
 retry:
 	if (!sync) {
-		if (duration >= SYNC_PERIODS * MIN_PERIOD_US) {
+		if (duration >= MIN_PRE_SYNC_US) {
 			data.codeLength = 0;
-			data.bitTotalTime = 0;
-			data.bitPeriodCount = 0;
+			data.sampleCount = 0;
+			data.zeroTime = 0;
+			data.oneTime = 0;
+			data.sampleComplete = false;
+			data.zeroBitTotalTime = 0;
+			data.zeroBitCount = 0;
+			data.oneBitTotalTime = 0;
+			data.oneBitCount = 0;
 			data.value = 0;
 			data.currentBit = 3;
 			data.start = last;
-			data.preSyncPeriod = duration / SYNC_PERIODS;
-			data.minSyncPeriod = data.preSyncPeriod * MIN_POST_SYNC_PERIODS;
-			data.maxSyncPeriod = data.preSyncPeriod * MAX_POST_SYNC_PERIODS;
+			data.preSyncTime = duration;
+			data.minSyncPeriod = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
+			data.maxSyncPeriod = duration * MAX_POST_SYNC_DURATION / Receiver::DIVISOR;
 			sync = true;
 
 #ifdef DEBUG_TIMING
@@ -154,46 +174,107 @@ retry:
 	} else {
 		bool postSyncPresent = false;
 
-		if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
-			postSyncPresent = true;
-		} else {
-			if (data.codeLength == sizeof(data.code) - 1) {
-				// Code too long
-			} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
-				if (duration <= maxZeroPeriod(data)) {
-					addBit(data, 0);
-					data.bitTotalTime += duration;
-					data.bitPeriodCount += ZERO_PERIODS;
-#ifdef DEBUG_TIMING
-					timeHandlerZero = micros() - now;
-#endif
-					goto done;
-				} else if (duration >= minOnePeriod(data)) {
-					addBit(data, 1);
-					data.bitTotalTime += duration;
-					data.bitPeriodCount += ONE_PERIODS;
-#ifdef DEBUG_TIMING
-					timeHandlerOne = micros() - now;
-#endif
-					goto done;
+		if (!data.sampleComplete) {
+			if (duration < MIN_PERIOD_US) {
+				// Too short
+				goto error;
+			} else if (data.sampleCount < Receiver::MAX_SAMPLES) {
+				data.bitSampleTimes[data.sampleCount++] = duration;
+
+				if (data.zeroTime == 0) {
+					// Assume first duration is 0-bit
+					data.zeroTime = duration;
+				} else if (duration > data.zeroTime * 2) {
+					if (data.oneTime == 0) {
+						// If this bit is more than 2x the duration of the currently
+						// known 0-bit, then it is the duration of the 1-bit
+						data.oneTime = duration;
+					} else {
+						// This looks like another 1-bit, average it into the timing
+						data.oneTime += duration;
+						data.oneTime /= 2;
+					}
+				} else if (duration < data.zeroTime / 2) {
+					// If this bit is less than 1/2th the duration of the currently
+					// known 0-bit then the previous bits were 1-bits and it is the
+					// duration of the 0-bit
+					data.oneTime = data.zeroTime;
+					data.zeroTime = duration;
 				} else {
-					// Invalid duration
+					// This looks like another 0-bit, average it into the timing
+					data.zeroTime += duration;
+					data.zeroTime /= 2;
 				}
+
+				if (data.sampleCount >= Receiver::MIN_SAMPLES && data.zeroTime != 0 && data.oneTime != 0) {
+					// Both bit durations have been detected, process existing sample data
+					for (uint_fast8_t i = 0; i < data.sampleCount; i++) {
+						if (data.bitSampleTimes[i] <= maxZeroPeriod(data)) {
+							addBit(data, 0);
+							data.zeroBitTotalTime += data.bitSampleTimes[i];
+							data.zeroBitCount++;
+						} else if (data.bitSampleTimes[i] >= minOnePeriod(data)) {
+							addBit(data, 1);
+							data.oneBitTotalTime += duration;
+							data.oneBitCount++;
+						} else {
+							// Oops
+							goto error;
+						}
+					}
+
+					data.sampleComplete = true;
+#ifdef DEBUG_TIMING
+					timeHandlerSampleComplete = micros() - now;
+#endif
+				}
+
+				goto done;
+			} else {
+				// Unable to identify periods after all sampling
+				goto error;
+			}
+		} else if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
+			postSyncPresent = true;
+		} else if (data.codeLength == sizeof(data.code) - 1) {
+			// Code too long
+		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
+			if (duration <= maxZeroPeriod(data)) {
+				addBit(data, 0);
+				data.zeroBitTotalTime += duration;
+				data.zeroBitCount++;
+#ifdef DEBUG_TIMING
+				timeHandlerZero = micros() - now;
+#endif
+				goto done;
+			} else if (duration >= minOnePeriod(data)) {
+				addBit(data, 1);
+				data.oneBitTotalTime += duration;
+				data.oneBitCount++;
+#ifdef DEBUG_TIMING
+				timeHandlerOne = micros() - now;
+#endif
+				goto done;
 			} else {
 				// Invalid duration
 			}
+		} else {
+			// Invalid duration
 		}
 
 		if (data.codeLength >= Code::MIN_LENGTH) {
 			data.code[data.codeLength] = 0;
 
-			receiver.addCode(Code(data.code, 3 - data.currentBit, data.value, now - data.start,
-				preSyncStandalone, postSyncPresent, data.preSyncPeriod, duration,
-				data.bitTotalTime, data.bitPeriodCount));
+			receiver.addCode(Code(data.code, 3 - data.currentBit, data.value,
+				now - data.start, preSyncStandalone, postSyncPresent,
+				data.preSyncTime, duration,
+				data.zeroBitTotalTime, data.zeroBitCount,
+				data.oneBitTotalTime, data.oneBitCount));
 		} else {
 			// Code too short
 		}
 
+error:
 		// Restart, reusing the current sync duration
 		sync = false;
 		preSyncStandalone = !postSyncPresent;
@@ -243,10 +324,12 @@ void Receiver::printCode() {
 		unsigned long copyTimeHandlerSyncFollowing = timeHandlerSyncFollowing;
 		unsigned long copyTimeHandlerZero = timeHandlerZero;
 		unsigned long copyTimeHandlerOne = timeHandlerOne;
+		unsigned long copyTimeHandlerSampleComplete = timeHandlerSampleComplete;
 		timeHandlerSyncStandalone = 0;
 		timeHandlerSyncFollowing = 0;
 		timeHandlerZero = 0;
 		timeHandlerOne = 0;
+		timeHandlerSampleComplete = 0;
 #endif
 		interrupts();
 
@@ -268,6 +351,10 @@ void Receiver::printCode() {
 		if (copyTimeHandlerOne != 0) {
 			SerialUSB.print("# One bit time: ");
 			SerialUSB.println(copyTimeHandlerOne);
+		}
+		if (copyTimeHandlerSampleComplete != 0) {
+			SerialUSB.print("# Sample complete processing: ");
+			SerialUSB.println(copyTimeHandlerSampleComplete);
 		}
 		SerialUSB.print("# Lookup and copy: ");
 		SerialUSB.println(timeRead);

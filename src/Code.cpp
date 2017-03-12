@@ -38,12 +38,13 @@ void memcpy_unrolled<0>(char *dst __attribute__((unused)), const char *src __att
 
 Code::Code(const char *code,
 		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
-		const unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
-		const unsigned long preSyncPeriod, const unsigned long postSyncTime,
-		unsigned long bitTotalTime, unsigned int bitPeriodCount)
-		: duration(duration),
-		preSyncPeriod(preSyncPeriod), postSyncTime(postSyncTime),
-		bitTotalTime(bitTotalTime), bitPeriodCount(bitPeriodCount),
+		unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
+		unsigned long preSyncTime, unsigned long postSyncTime,
+		unsigned long zeroBitTotalTime, unsigned int zeroBitCount,
+		unsigned long oneBitTotalTime, unsigned int oneBitCount)
+		: duration(duration), preSyncTime(preSyncTime), postSyncTime(postSyncTime),
+		zeroBitTotalTime(zeroBitTotalTime), zeroBitCount(zeroBitCount),
+		oneBitTotalTime(oneBitTotalTime), oneBitCount(oneBitCount),
 		trailingBitCount(trailingBitCount), trailingBitsValue(trailingBitsValue),
 		preSyncStandalone(preSyncStandalone), postSyncPresent(postSyncPresent) {
 	memcpy_unrolled<sizeof(this->code)>(this->code, code);
@@ -103,19 +104,24 @@ size_t Code::printTo(Print &p) const {
 	n += p.print("\",duration: ");
 	n += p.print(duration);
 
-	if (preSyncPeriod) {
-		n += p.print(",preSyncPeriod: ");
-		n += p.print(preSyncPeriod);
+	if (preSyncTime) {
+		n += p.print(",preSyncTime: ");
+		n += p.print(preSyncTime);
 	}
 
 	if (postSyncTime) {
-		n += p.print(",postSyncPeriod: ");
-		n += p.print(postSyncTime / Receiver::SYNC_PERIODS);
+		n += p.print(",postSyncTime: ");
+		n += p.print(postSyncTime);
 	}
 
-	if (bitPeriodCount) {
-		n += p.print(",bitPeriod: ");
-		n += p.print(bitTotalTime / bitPeriodCount);
+	if (zeroBitCount) {
+		n += p.print(",zeroBitDuration: ");
+		n += p.print(zeroBitTotalTime / zeroBitCount);
+	}
+
+	if (oneBitCount) {
+		n += p.print(",oneBitDuration: ");
+		n += p.print(oneBitTotalTime / oneBitCount);
 	}
 
 	if (postSyncPresent) {
