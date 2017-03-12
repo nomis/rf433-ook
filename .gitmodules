@@ -1,0 +1,3 @@
+[submodule "StandardCplusplus"]
+	path = lib/StandardCplusplus
+	url = https://github.com/maniacbug/StandardCplusplus
