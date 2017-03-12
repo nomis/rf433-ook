@@ -179,7 +179,7 @@ void Receiver::addCode(const char *code,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
 		unsigned long allBitPeriod) {
-	receiver.codes[receiver.codeIndex] = Code(code, start, stop,
+	receiver.codes[receiver.codeIndex] = Code(code, stop - start,
 		preSyncPeriod, postSyncPeriod,
 		zeroBitPeriod, oneBitPeriod, allBitPeriod);
 

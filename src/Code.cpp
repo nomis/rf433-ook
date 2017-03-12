@@ -27,11 +27,11 @@ Code::Code() {
 }
 
 Code::Code(const char *code,
-		const unsigned long start, const unsigned long stop,
+		const unsigned long duration,
 		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
 		const unsigned long zeroBitPeriod, const unsigned long oneBitPeriod,
 		const unsigned long allBitPeriod)
-		: start(start), stop(stop) {
+		: duration(duration) {
 	strncpy(this->code, code, sizeof(this->code));
 
 	if (preSyncPeriod <= UINT_MAX) {
@@ -69,12 +69,8 @@ size_t Code::printTo(Print &p) const {
 
 	n += p.print("{code: \"");
 	n += p.print(code);
-	n += p.print("\",start: ");
-	n += p.print(start);
-	n += p.print(",stop: ");
-	n += p.print(stop);
-	n += p.print(",now: ");
-	n += p.print(micros());
+	n += p.print("\",duration: ");
+	n += p.print(duration);
 
 	if (preSyncPeriod) {
 		n += p.print(",preSyncPeriod: ");
