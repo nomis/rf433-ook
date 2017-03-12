@@ -179,24 +179,29 @@ void Receiver::addCode(const char *code,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
 		unsigned long allBitPeriod) {
-	if (receiver.codes.size() == MAX_CODES) {
-		receiver.codes.pop_front();
-	}
-
-	receiver.codes.push_back({code, start, stop,
+	receiver.codes[receiver.codeIndex] = Code(code, start, stop,
 		preSyncPeriod, postSyncPeriod,
-		zeroBitPeriod, oneBitPeriod, allBitPeriod});
+		zeroBitPeriod, oneBitPeriod, allBitPeriod);
+
+	receiver.codeIndex = (receiver.codeIndex + 1) % MAX_CODES;
 }
 
 void Receiver::printCode() {
 	noInterrupts();
-	if (!receiver.codes.empty()) {
-		Code code = receiver.codes.front();
-		receiver.codes.pop_front();
-		interrupts();
 
-		SerialUSB.println(code);
-	} else {
-		interrupts();
+	for (uint_fast16_t n = 0; n < MAX_CODES; n++) {
+		// This won't work if `codeIndex + n` wraps before `% MAX_CODES` is applied
+		uint_fast8_t i = ((uint_fast16_t)codeIndex + n) % MAX_CODES;
+
+		if (!codes[i].empty()) {
+			Code code = codes[i];
+			codes[i].clear();
+			interrupts();
+
+			SerialUSB.println(code);
+			return;
+		}
 	}
+
+	interrupts();
 }

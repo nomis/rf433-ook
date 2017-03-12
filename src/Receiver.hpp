@@ -21,12 +21,6 @@
 
 #include <Arduino.h>
 
-#ifdef abs
-# undef abs
-#endif
-
-#include <list>
-
 #include "Code.hpp"
 
 class Receiver {
@@ -37,7 +31,10 @@ public:
 	void printCode();
 
 protected:
-	std::list<Code> codes;
+	static constexpr unsigned int MAX_CODES = 10;
+
+	Code codes[MAX_CODES];
+	uint_fast8_t codeIndex = 0; /// The next code to be written
 
 private:
 	static void interruptHandler();
@@ -46,11 +43,9 @@ private:
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
 		unsigned long allBitPeriod);
 
-	static constexpr unsigned int MAX_CODES = 20;
-
 	static constexpr unsigned long MIN_PERIOD_US = 120;
 	static constexpr unsigned int SYNC_CYCLES = 31;
-};
+} __attribute__((packed));
 
 extern Receiver receiver;
 

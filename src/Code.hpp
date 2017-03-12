@@ -21,8 +21,13 @@
 
 #include <Arduino.h>
 
+class Receiver;
+
 class Code: public Printable {
+	friend Receiver;
+
 public:
+	Code();
 	Code(const char *code, unsigned long start, unsigned long stop,
 		unsigned long preSyncPeriod, unsigned long postSyncPeriod,
 		unsigned long zeroBitPeriod, unsigned long oneBitPeriod,
@@ -34,6 +39,8 @@ public:
 	static constexpr uint8_t MAX_LENGTH = 64;
 
 protected:
+	bool empty() const;
+	void clear();
 	size_t printHomeEasyV1(bool &first, Print &p) const __attribute__((warn_unused_result));
 
 	char code[MAX_LENGTH + 1] = { 0 };
@@ -44,6 +51,6 @@ protected:
 	unsigned int zeroBitPeriod;
 	unsigned int oneBitPeriod;
 	unsigned int allBitPeriod;
-};
+} __attribute__((packed));
 
 #endif

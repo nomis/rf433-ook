@@ -22,6 +22,10 @@
 
 #include "Code.hpp"
 
+Code::Code() {
+
+}
+
 Code::Code(const char *code,
 		const unsigned long start, const unsigned long stop,
 		const unsigned long preSyncPeriod, const unsigned long postSyncPeriod,
@@ -49,6 +53,14 @@ Code::Code(const char *code,
 
 Code::~Code() {
 
+}
+
+bool Code::empty() const {
+	return code[0] == 0;
+}
+
+void Code::clear() {
+	code[0] = 0;
 }
 
 size_t Code::printTo(Print &p) const {
