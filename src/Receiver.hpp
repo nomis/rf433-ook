@@ -19,6 +19,7 @@
 #ifndef RF433_OOK_RECEIVER_HPP
 #define RF433_OOK_RECEIVER_HPP
 
+#include <limits.h>
 #include <Arduino.h>
 
 #include "Code.hpp"
@@ -40,8 +41,20 @@ private:
 	static void interruptHandler();
 	static void addCode(const Code &code);
 
+	// 1 period = 0-bit
+	static constexpr unsigned long MIN_ZERO_PERIOD_PERCENT = 40;
+	static constexpr unsigned long MAX_ZERO_PERIOD_PERCENT = 160;
+
+	// 3 periods = 1-bit
+	static constexpr unsigned long MIN_ONE_PERIOD_PERCENT = 230;
+	static constexpr unsigned long MAX_ONE_PERIOD_PERCENT = 370;
+
+	static constexpr unsigned long SYNC_PERIODS = 31;
+	static constexpr unsigned long MIN_POST_SYNC_PERIODS = SYNC_PERIODS - 6;
+	static constexpr unsigned long MAX_POST_SYNC_PERIODS = SYNC_PERIODS + 4;
+
 	static constexpr unsigned long MIN_PERIOD_US = 120;
-	static constexpr unsigned int SYNC_CYCLES = 31;
+	static constexpr unsigned long MAX_PERIOD_US = UINT_MAX * 100UL / MAX_ONE_PERIOD_PERCENT; // Must be able to fit duration calculation into maxOnePeriod
 } __attribute__((packed));
 
 extern Receiver receiver;
