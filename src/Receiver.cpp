@@ -90,7 +90,6 @@ struct ReceiverData {
 
 	// Statistics
 	unsigned long preSyncTime;
-	uint_fast8_t onePeriods;
 	unsigned long zeroBitTotalTime;
 	unsigned int zeroBitCount;
 	unsigned long oneBitTotalTime;
