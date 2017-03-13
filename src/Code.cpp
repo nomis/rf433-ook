@@ -22,74 +22,59 @@
 #include "Receiver.hpp"
 
 Code::Code() {
-
-}
-
-template <size_t length>
-void memcpy_unrolled(char *dst, const char *src) {
-	*dst = *src;
-	memcpy_unrolled<length - 1>(dst + 1, src + 1);
-}
-
-template <>
-void memcpy_unrolled<0>(char *dst __attribute__((unused)), const char *src __attribute__((unused))) {
-
-}
-
-Code::Code(const char *code,
-		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
-		unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
-		unsigned long preSyncTime, unsigned long postSyncTime,
-		unsigned long zeroBitTotalTime, unsigned int zeroBitCount,
-		unsigned long oneBitTotalTime, unsigned int oneBitCount)
-		: duration(duration), preSyncTime(preSyncTime), postSyncTime(postSyncTime),
-		zeroBitTotalTime(zeroBitTotalTime), zeroBitCount(zeroBitCount),
-		oneBitTotalTime(oneBitTotalTime), oneBitCount(oneBitCount),
-		trailingBitCount(trailingBitCount), trailingBitsValue(trailingBitsValue),
-		preSyncStandalone(preSyncStandalone), postSyncPresent(postSyncPresent) {
-	memcpy_unrolled<sizeof(this->code)>(this->code, code);
+	valid = false;
 }
 
 Code::~Code() {
 
 }
 
-bool Code::empty() const {
-	return code[0] == 0;
+bool Code::isValid() const {
+	return valid;
 }
 
-void Code::clear() {
-	code[0] = 0;
+void Code::setValid(bool valid) {
+	this->valid = valid;
+}
+
+uint8_t inline Code::messageValueAt(uint8_t index) const {
+	return (message[index / 2] >> ((index & 1) ? 0 : 4)) & 0xF;
+}
+
+uint8_t inline Code::messageTrailingCount() const {
+	return (messageLength & 0x03);
+}
+
+uint8_t inline Code::messageTrailingValue() const {
+	return (messageValueAt(messageLength >> 2) >> (4 - messageTrailingCount()))
+			& (0x7 >> (3 - messageTrailingCount()));
+}
+
+static char toHex(uint8_t value) {
+	return (value < 10)
+		? (char)('0' + value)
+		: (char)('A' + (value - 10));
+}
+
+void Code::messageAsString(String &code, char &packedTrailingBits) const {
+	for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+		code += toHex(messageValueAt(i));
+	}
+
+	// Re-pack the trailing bits for shorter output
+	packedTrailingBits = (1 << messageTrailingCount()) | messageTrailingValue();
+	packedTrailingBits = (packedTrailingBits < 10)
+			? (char)('0' + packedTrailingBits)
+			: (char)('A' + (packedTrailingBits - 10));
 }
 
 size_t Code::printTo(Print &p) const {
 	size_t n = 0;
 	bool first = true;
+	String code;
 	char packedTrailingBits;
 
-	// Re-pack the trailing bits for shorter output
-	switch (trailingBitCount) {
-	case 3:
-		packedTrailingBits = 0x8 | (trailingBitsValue & 0x7);
-		break;
-
-	case 2:
-		packedTrailingBits = 0x4 | (trailingBitsValue & 0x3);
-		break;
-
-	case 1:
-		packedTrailingBits = 0x2 | (trailingBitsValue & 0x1);
-		break;
-
-	case 0:
-	default:
-		packedTrailingBits = 0;
-		break;
-	}
-
-	packedTrailingBits = (packedTrailingBits < 10)
-			? (char)('0' + packedTrailingBits)
-			: (char)('A' + (packedTrailingBits - 10));
+	messageAsString(code, packedTrailingBits);
 
 	n += p.print("{code: \"");
 	n += p.print(code);
@@ -126,8 +111,8 @@ size_t Code::printTo(Print &p) const {
 
 	if (postSyncPresent) {
 		n += p.print(",decode: {");
-		n += printHomeEasyV1A(first, p);
-		n += printHomeEasyV2A(first, p);
+		n += printHomeEasyV1A(first, code, p);
+		n += printHomeEasyV2A(first, code, p);
 		n += p.print('}');
 	}
 
@@ -141,19 +126,19 @@ size_t Code::printTo(Print &p) const {
 	return n;
 }
 
-size_t Code::printHomeEasyV1A(bool &first, Print &p) const {
+size_t Code::printHomeEasyV1A(bool &first, const String &code, Print &p) const {
 	size_t n = 0;
 	String decoded;
 	int8_t group = -1;
 	int8_t device = -1;
 	String action;
 
-	if (strlen(code) != 12 || trailingBitCount != 1 || trailingBitsValue != 0) {
+	if (code.length() != 12 || messageTrailingCount() != 1 || messageTrailingValue() != 0x0) {
 		goto out;
 	}
 
-	for (const char *c = code; *c; c++) {
-		switch (*c) {
+	for (const char c : code) {
+		switch (c) {
 		case '5':
 			decoded += '0';
 			break;
@@ -226,20 +211,19 @@ out:
 	return n;
 }
 
-size_t Code::printHomeEasyV2A(bool &first, Print &p) const {
+size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 	size_t n = 0;
-	size_t length = strlen(code);
 	String decoded;
 	uint32_t group = 0;
 	uint8_t device;
 	int8_t dimLevel = -1;
 	String action;
 
-	if ((length != 32 && length != 36) || (trailingBitCount & 0x1) != 1 || (trailingBitsValue & 0x3) != 0x0)
+	if ((code.length() != 32 && code.length() != 36) || messageTrailingCount() != 3 || (messageTrailingValue() & 0x1) != 0x0)
 		goto out;
 
-	for (const char *c = code; *c; c++) {
-		switch (*c) {
+	for (const char c : code) {
+		switch (c) {
 		case '4':
 		case '0':
 			decoded += '0';
@@ -267,7 +251,7 @@ size_t Code::printHomeEasyV2A(bool &first, Print &p) const {
 		| ((uint8_t)(decoded[30] - '0') << 1)
 		| (uint8_t)(decoded[31] - '0');
 
-	if (length == 36) {
+	if (code.length() == 36) {
 		dimLevel = ((uint8_t)(decoded[32] - '0') << 3)
 			| ((uint8_t)(decoded[33] - '0') << 2)
 			| ((uint8_t)(decoded[34] - '0') << 1)

@@ -28,25 +28,26 @@ class Code: public Printable {
 
 public:
 	Code();
-	Code(const char *code,
-		int_fast8_t trailingBitCount, uint_fast8_t trailingBitsValue,
-		unsigned long duration, bool preSyncStandalone, bool postSyncPresent,
-		unsigned long preSyncTime, unsigned long postSyncTime,
-		unsigned long zeroBitTotalTime, unsigned int zeroBitCount,
-		unsigned long oneBitTotalTime, unsigned int oneBitCount);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 
-	static constexpr uint8_t MIN_LENGTH = 12;
-	static constexpr uint8_t MAX_LENGTH = 48;
+	static constexpr uint8_t MIN_LENGTH = 12 * 4;
+	static constexpr uint8_t MAX_LENGTH = 48 * 4;
 
 protected:
-	bool empty() const;
-	void clear();
-	size_t printHomeEasyV1A(bool &first, Print &p) const __attribute__((warn_unused_result));
-	size_t printHomeEasyV2A(bool &first, Print &p) const __attribute__((warn_unused_result));
+	bool isValid() const;
+	void setValid(bool valid);
 
-	char code[MAX_LENGTH + 1];
+	uint8_t messageValueAt(uint8_t index) const;
+	uint8_t messageTrailingCount() const;
+	uint8_t messageTrailingValue() const;
+	void messageAsString(String &code, char &packedTrailingBits) const;
+
+	size_t printHomeEasyV1A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
+	size_t printHomeEasyV2A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
+
+	uint8_t message[MAX_LENGTH / 8];
+	uint8_t messageLength;
 	unsigned long duration;
 	unsigned long preSyncTime;
 	unsigned long postSyncTime;
@@ -58,6 +59,7 @@ protected:
 	unsigned int trailingBitsValue : 3;
 	bool preSyncStandalone : 1;
 	bool postSyncPresent : 1;
+	bool valid : 1;
 } __attribute__((packed));
 
 #endif

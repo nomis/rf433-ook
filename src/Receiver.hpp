@@ -69,7 +69,8 @@ protected:
 
 private:
 	static void interruptHandler();
-	void addCode(const Code &code);
+	static void addBit(Code *code, bool bit);
+	void addCode();
 } __attribute__((packed));
 
 extern Receiver receiver;

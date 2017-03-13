@@ -72,7 +72,7 @@ void Receiver::attach(int pin) {
 	attachInterrupt(digitalPinToInterrupt(pin), interruptHandler, CHANGE);
 }
 
-struct ReceiverData {
+struct ReceiverTiming {
 	// Sampling/timing
 	unsigned long bitSampleTimes[Receiver::MAX_SAMPLES];
 	uint_fast8_t sampleCount;
@@ -82,77 +82,63 @@ struct ReceiverData {
 	unsigned long minSyncPeriod, maxSyncPeriod;
 
 	// Message
-	char code[Code::MAX_LENGTH + 1];
-	uint_fast8_t codeLength;
 	unsigned long start;
-	int_fast8_t currentBit;
-	uint_fast8_t value;
-
-	// Statistics
-	unsigned long preSyncTime;
-	unsigned long zeroBitTotalTime;
-	unsigned int zeroBitCount;
-	unsigned long oneBitTotalTime;
-	unsigned int oneBitCount;
 };
 
 // These take about 4µs each, so it's better to do them every time
 // than to add to the work required to process a sync event
-static inline unsigned long minZeroPeriod(const ReceiverData &data) {
+static inline unsigned long minZeroPeriod(const ReceiverTiming &data) {
 	return data.zeroTime * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
 }
 
-static inline unsigned long maxZeroPeriod(const ReceiverData &data) {
+static inline unsigned long maxZeroPeriod(const ReceiverTiming &data) {
 	return data.zeroTime * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR;
 }
 
-static inline unsigned long minOnePeriod(const ReceiverData &data) {
+static inline unsigned long minOnePeriod(const ReceiverTiming &data) {
 	return data.oneTime * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR;
 }
 
-static inline unsigned long maxOnePeriod(const ReceiverData &data) {
+static inline unsigned long maxOnePeriod(const ReceiverTiming &data) {
 	return data.oneTime * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
 }
 
-static inline void addBit(ReceiverData &data, uint_fast8_t bit) {
-	data.value |= bit << data.currentBit;
+inline void Receiver::addBit(Code *code, bool one) {
+	const uint8_t value = 0x80 >> (code->messageLength & 0x07);
 
-	if (data.currentBit == 0) {
-		data.code[data.codeLength++] = (data.value < 10)
-				? (char)('0' + data.value)
-				: (char)('A' + (data.value - 10));
-
-		data.currentBit = 3;
-		data.value = 0;
+	if (one) {
+		code->message[code->messageLength / 8] |= value;
 	} else {
-		data.currentBit--;
+		code->message[code->messageLength / 8] &= ~value;
 	}
+
+	code->messageLength++;
 }
 
 void Receiver::interruptHandler() {
 	static unsigned long last = 0;
 	static bool sync = false;
 	static bool preSyncStandalone = true;
-	static ReceiverData data;
+	static ReceiverTiming data;
+	static Code *code = nullptr;
 	unsigned long now = micros();
 	unsigned long duration = now - last;
 
 retry:
 	if (!sync) {
 		if (duration >= MIN_PRE_SYNC_US) {
-			data.codeLength = 0;
+			code = &receiver.codes[receiver.codeWriteIndex];
+			code->messageLength = 0;
 			data.sampleCount = 0;
 			data.zeroTime = 0;
 			data.oneTime = 0;
 			data.sampleComplete = false;
-			data.zeroBitTotalTime = 0;
-			data.zeroBitCount = 0;
-			data.oneBitTotalTime = 0;
-			data.oneBitCount = 0;
-			data.value = 0;
-			data.currentBit = 3;
+			code->zeroBitTotalTime = 0;
+			code->zeroBitCount = 0;
+			code->oneBitTotalTime = 0;
+			code->oneBitCount = 0;
 			data.start = last;
-			data.preSyncTime = duration;
+			code->preSyncTime = duration;
 			data.minSyncPeriod = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
 			data.maxSyncPeriod = duration * MAX_POST_SYNC_DURATION / Receiver::DIVISOR;
 			sync = true;
@@ -209,13 +195,13 @@ retry:
 					// Both bit durations have been detected, process existing sample data
 					for (uint_fast8_t i = 0; i < data.sampleCount; i++) {
 						if (data.bitSampleTimes[i] <= maxZeroPeriod(data)) {
-							addBit(data, 0);
-							data.zeroBitTotalTime += data.bitSampleTimes[i];
-							data.zeroBitCount++;
+							addBit(code, 0);
+							code->zeroBitTotalTime += data.bitSampleTimes[i];
+							code->zeroBitCount++;
 						} else if (data.bitSampleTimes[i] >= minOnePeriod(data)) {
-							addBit(data, 1);
-							data.oneBitTotalTime += duration;
-							data.oneBitCount++;
+							addBit(code, 1);
+							code->oneBitTotalTime += duration;
+							code->oneBitCount++;
 						} else {
 							// Oops
 							goto error;
@@ -235,21 +221,21 @@ retry:
 			}
 		} else if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
 			postSyncPresent = true;
-		} else if (data.codeLength == sizeof(data.code) - 1) {
+		} else if (code->messageLength == sizeof(code->message) * 8) {
 			// Code too long
 		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
 			if (duration <= maxZeroPeriod(data)) {
-				addBit(data, 0);
-				data.zeroBitTotalTime += duration;
-				data.zeroBitCount++;
+				addBit(code, 0);
+				code->zeroBitTotalTime += duration;
+				code->zeroBitCount++;
 #ifdef DEBUG_TIMING
 				timeHandlerZero = micros() - now;
 #endif
 				goto done;
 			} else if (duration >= minOnePeriod(data)) {
-				addBit(data, 1);
-				data.oneBitTotalTime += duration;
-				data.oneBitCount++;
+				addBit(code, 1);
+				code->oneBitTotalTime += duration;
+				code->oneBitCount++;
 #ifdef DEBUG_TIMING
 				timeHandlerOne = micros() - now;
 #endif
@@ -261,14 +247,14 @@ retry:
 			// Invalid duration
 		}
 
-		if (data.codeLength >= Code::MIN_LENGTH) {
-			data.code[data.codeLength] = 0;
+		if (code->messageLength >= Code::MIN_LENGTH) {
+			code->duration = now - data.start;
+			code->postSyncTime = duration;
+			code->preSyncStandalone = preSyncStandalone;
+			code->postSyncPresent = postSyncPresent;
 
-			receiver.addCode(Code(data.code, 3 - data.currentBit, data.value,
-				now - data.start, preSyncStandalone, postSyncPresent,
-				data.preSyncTime, duration,
-				data.zeroBitTotalTime, data.zeroBitCount,
-				data.oneBitTotalTime, data.oneBitCount));
+			code = nullptr;
+			receiver.addCode();
 		} else {
 			// Code too short
 		}
@@ -284,8 +270,14 @@ done:
 	last = now;
 }
 
-void Receiver::addCode(const Code &code) {
-	if (!codes[codeWriteIndex].empty()) {
+void Receiver::addCode() {
+	codes[codeWriteIndex].setValid(true);
+	codeWriteIndex++;
+	if (codeWriteIndex >= MAX_CODES) {
+		codeWriteIndex = 0;
+	}
+
+	if (codes[codeWriteIndex].isValid()) {
 		// assert(codeReadIndex == codeWriteIndex);
 
 		codeReadIndex++;
@@ -293,13 +285,7 @@ void Receiver::addCode(const Code &code) {
 			codeReadIndex = 0;
 		}
 
-		// assert(!codes[codeReadIndex].empty());
-	}
-
-	codes[codeWriteIndex] = code;
-	codeWriteIndex++;
-	if (codeWriteIndex >= MAX_CODES) {
-		codeWriteIndex = 0;
+		// assert(codes[codeReadIndex].isValid());
 	}
 }
 
@@ -309,9 +295,9 @@ void Receiver::printCode() {
 	unsigned long timeRead = micros();
 #endif
 
-	if (!codes[codeReadIndex].empty()) {
+	if (codes[codeReadIndex].isValid()) {
 		Code code = codes[codeReadIndex];
-		codes[codeReadIndex].clear();
+		codes[codeReadIndex].setValid(false);
 		codeReadIndex++;
 		if (codeReadIndex >= MAX_CODES) {
 			codeReadIndex = 0;
