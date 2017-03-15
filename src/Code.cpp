@@ -132,12 +132,12 @@ size_t Code::printTo(Print &p) const {
 
 	if (zeroBitCount) {
 		n += p.print(",zeroBitDuration: ");
-		n += p.print(zeroBitTotalTime / zeroBitCount);
+		n += p.print(bitTotalTime[0] / zeroBitCount);
 	}
 
 	if (oneBitCount) {
 		n += p.print(",oneBitDuration: ");
-		n += p.print(oneBitTotalTime / oneBitCount);
+		n += p.print(bitTotalTime[1] / oneBitCount);
 	}
 
 	if (postSyncPresent) {

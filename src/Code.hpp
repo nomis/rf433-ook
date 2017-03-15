@@ -52,8 +52,7 @@ protected:
 	unsigned long duration;
 	unsigned long preSyncTime;
 	unsigned long postSyncTime;
-	unsigned long zeroBitTotalTime;
-	unsigned long oneBitTotalTime;
+	unsigned long bitTotalTime[2];
 	unsigned int trailingBitCount : 2;
 	unsigned int trailingBitsValue : 3;
 	bool preSyncStandalone : 1;

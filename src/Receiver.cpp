@@ -60,6 +60,9 @@ enum HandlerTiming {
 	TIMING_SYNC_FOLLOWING,
 	TIMING_HANDLER_ZERO,
 	TIMING_HANDLER_ONE,
+	TIMING_SAMPLE_ZERO,
+	TIMING_SAMPLE_ONE,
+	TIMING_SAMPLE_SWAP,
 	TIMING_SAMPLE_COMPLETE,
 	LEN_TIMING
 };
@@ -81,12 +84,13 @@ void Receiver::attach(int pin) {
 }
 
 struct ReceiverTiming {
-	// Sampling/timing
-	unsigned long bitSampleTimes[Receiver::MAX_SAMPLES];
-	uint_fast8_t sampleCount;
-	unsigned long zeroTime;
-	unsigned long oneTime;
+	// Sampling
+	unsigned long sampleMinTime[2];
+	unsigned long sampleMaxTime[2];
 	bool sampleComplete;
+
+	// Timing
+	unsigned long bitTime[2];
 	unsigned long minSyncPeriod, maxSyncPeriod;
 
 	// Message
@@ -96,31 +100,39 @@ struct ReceiverTiming {
 // These take about 4µs each, so it's better to do them every time
 // than to add to the work required to process a sync event
 static inline unsigned long minZeroPeriod(const ReceiverTiming &data) {
-	return data.zeroTime * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
+	return data.bitTime[0] * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
 }
 
 static inline unsigned long maxZeroPeriod(const ReceiverTiming &data) {
-	return data.zeroTime * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR;
+	return data.bitTime[0] * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR;
 }
 
 static inline unsigned long minOnePeriod(const ReceiverTiming &data) {
-	return data.oneTime * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR;
+	return data.bitTime[1] * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR;
 }
 
 static inline unsigned long maxOnePeriod(const ReceiverTiming &data) {
-	return data.oneTime * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
+	return data.bitTime[1] * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
 }
 
-inline void Receiver::addBit(Code *code, bool one) {
+inline void Receiver::addBit(Code *code, bool bit, const unsigned long &duration) {
 	const uint8_t value = 0x80 >> (code->messageLength & 0x07);
 
-	if (one) {
+	if (bit) {
 		code->message[code->messageLength / 8] |= value;
 	} else {
 		code->message[code->messageLength / 8] &= ~value;
 	}
 
 	code->messageLength++;
+	code->bitTotalTime[bit] += duration;
+}
+
+template <typename T>
+static inline void swap(T *values) {
+	T tmp = values[0];
+	values[0] = values[1];
+	values[1] = tmp;
 }
 
 void Receiver::interruptHandler() {
@@ -139,13 +151,16 @@ retry:
 	if (!sync) {
 		if (duration >= MIN_PRE_SYNC_US) {
 			code = &receiver.codes[receiver.codeWriteIndex];
-			code->messageLength = 0;
-			data.sampleCount = 0;
-			data.zeroTime = 0;
-			data.oneTime = 0;
+			data.sampleMinTime[0] = ~0;
+			data.sampleMinTime[1] = ~0;
+			data.sampleMaxTime[0] = 0;
+			data.sampleMaxTime[1] = 0;
 			data.sampleComplete = false;
-			code->zeroBitTotalTime = 0;
-			code->oneBitTotalTime = 0;
+			code->messageLength = 0;
+			data.bitTime[0] = 0;
+			data.bitTime[1] = 0;
+			code->bitTotalTime[0] = 0;
+			code->bitTotalTime[1] = 0;
 			data.start = last;
 			code->preSyncTime = duration;
 			data.minSyncPeriod = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
@@ -172,59 +187,92 @@ retry:
 			if (duration < MIN_BIT_US) {
 				// Too short
 				goto error;
-			} else if (data.sampleCount < Receiver::MAX_SAMPLES) {
-				data.bitSampleTimes[data.sampleCount++] = duration;
+			} else {
+				bool bit;
 
-				if (data.zeroTime == 0) {
+				if (data.bitTime[0] == 0) {
 					// Assume first duration is 0-bit
-					data.zeroTime = duration;
-				} else if (duration >= data.zeroTime * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
-					if (data.oneTime == 0) {
+					data.bitTime[0] = duration;
+
+					bit = 0;
+#ifdef DEBUG_TIMING
+					timingType = TIMING_SAMPLE_ZERO;
+#endif
+				} else if (duration >= data.bitTime[0] * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
+					if (data.bitTime[1] == 0) {
 						// This bit looks like a 1-bit relative to the duration of the
 						// currently known 0-bit, this is now the duration of the 1-bit
-						data.oneTime = duration;
+						data.bitTime[1] = duration;
 					} else {
 						// This looks like another 1-bit, average it into the timing
-						data.oneTime += duration;
-						data.oneTime /= 2;
+						data.bitTime[1] += duration;
+						data.bitTime[1] /= 2;
 					}
-				} else if (data.zeroTime >= duration * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
+
+					bit = 1;
+#ifdef DEBUG_TIMING
+					timingType = TIMING_SAMPLE_ONE;
+#endif
+				} else if (data.bitTime[0] >= duration * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
 					// If the currently known 0-bit looks like a 1-bit relative to
 					// this bit then the previous bits were 1-bits and this is now
 					// the duration of the 0-bit
-					data.oneTime = data.zeroTime;
-					data.zeroTime = duration;
-				} else {
-					// This looks like another 0-bit, average it into the timing
-					data.zeroTime += duration;
-					data.zeroTime /= 2;
-				}
+					data.bitTime[1] = data.bitTime[0];
+					data.bitTime[0] = duration;
 
-				if (data.sampleCount >= Receiver::MIN_SAMPLES && data.zeroTime != 0 && data.oneTime != 0) {
-					// Both bit durations have been detected, process existing sample data
-					for (uint_fast8_t i = 0; i < data.sampleCount; i++) {
-						if (data.bitSampleTimes[i] <= maxZeroPeriod(data)) {
-							addBit(code, 0);
-							code->zeroBitTotalTime += data.bitSampleTimes[i];
-						} else if (data.bitSampleTimes[i] >= minOnePeriod(data)) {
-							addBit(code, 1);
-							code->oneBitTotalTime += duration;
-						} else {
-							// Oops
-							goto error;
-						}
+					swap(data.sampleMinTime);
+					swap(data.sampleMaxTime);
+					swap(code->bitTotalTime);
+
+					// Invert previously stored bits
+					for (uint_fast8_t i = 0; i < (code->messageLength >> 3) + 1; i++) {
+						code->message[i] = ~code->message[i];
 					}
 
-					data.sampleComplete = true;
+					bit = 0;
 #ifdef DEBUG_TIMING
-					timingType = TIMING_SAMPLE_COMPLETE;
+					timingType = TIMING_SAMPLE_SWAP;
+#endif
+				} else {
+					// This looks like another 0-bit, average it into the timing
+					data.bitTime[0] += duration;
+					data.bitTime[0] /= 2;
+
+					bit = 0;
+#ifdef DEBUG_TIMING
+					timingType = TIMING_SAMPLE_ZERO;
 #endif
 				}
 
+				addBit(code, bit, duration);
+
+				if (duration < data.sampleMinTime[bit]) {
+					data.sampleMinTime[bit] = duration;
+				}
+
+				if (duration > data.sampleMaxTime[bit]) {
+					data.sampleMaxTime[bit] = duration;
+				}
+
+				if (code->messageLength >= Receiver::MIN_SAMPLES && data.bitTime[0] != 0 && data.bitTime[1] != 0) {
+					// Both bit durations have been detected, check the existing timings
+					if (data.sampleMinTime[0] < minZeroPeriod(data) || data.sampleMaxTime[0] > maxZeroPeriod(data)
+							|| data.sampleMinTime[1] < minOnePeriod(data) || data.sampleMaxTime[1] > maxOnePeriod(data)) {
+						// Oops
+						goto error;
+					}
+
+#ifdef DEBUG_TIMING
+					timingType = TIMING_SAMPLE_COMPLETE;
+#endif
+
+					data.sampleComplete = true;
+				} else if (code->messageLength >= Receiver::MAX_SAMPLES) {
+					// Unable to identify periods after all sampling
+					goto error;
+				}
+
 				goto done;
-			} else {
-				// Unable to identify periods after all sampling
-				goto error;
 			}
 		} else if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
 			postSyncPresent = true;
@@ -232,15 +280,13 @@ retry:
 			// Code too long
 		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
 			if (duration <= maxZeroPeriod(data)) {
-				addBit(code, 0);
-				code->zeroBitTotalTime += duration;
+				addBit(code, 0, duration);
 #ifdef DEBUG_TIMING
 				timingType = TIMING_HANDLER_ZERO;
 #endif
 				goto done;
 			} else if (duration >= minOnePeriod(data)) {
-				addBit(code, 1);
-				code->oneBitTotalTime += duration;
+				addBit(code, 1, duration);
 #ifdef DEBUG_TIMING
 				timingType = TIMING_HANDLER_ONE;
 #endif
@@ -298,6 +344,8 @@ void Receiver::addCode() {
 	}
 
 	if (codes[codeWriteIndex].isValid()) {
+		codes[codeWriteIndex].setValid(false);
+
 		// assert(codeReadIndex == codeWriteIndex);
 
 		codeReadIndex++;
@@ -367,6 +415,20 @@ void Receiver::printCode() {
 			SerialUSB.print(copyHandlerTimesMin[TIMING_HANDLER_ONE]);
 			SerialUSB.print(',');
 			SerialUSB.print(copyHandlerTimesMax[TIMING_HANDLER_ONE]);
+			SerialUSB.print(']');
+		}
+		if (copyHandlerTimesMax[TIMING_SAMPLE_ZERO] != 0) {
+			SerialUSB.print(",sampleZero: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_SAMPLE_ZERO]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_SAMPLE_ZERO]);
+			SerialUSB.print(']');
+		}
+		if (copyHandlerTimesMax[TIMING_SAMPLE_ONE] != 0) {
+			SerialUSB.print(",sampleOne: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_SAMPLE_ONE]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_SAMPLE_ONE]);
 			SerialUSB.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE] != 0) {

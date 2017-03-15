@@ -69,7 +69,7 @@ protected:
 
 private:
 	static void interruptHandler();
-	static void addBit(Code *code, bool bit);
+	static void addBit(Code *code, bool bit, const unsigned long &duration);
 	void addCode();
 } __attribute__((packed));
 
