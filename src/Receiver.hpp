@@ -58,8 +58,8 @@ protected:
 	// Minimum time for an initial sync or processing will be ignored
 	static constexpr unsigned long MIN_PRE_SYNC_US = 2000;
 
-	// Minimum time for a 0-bit or processing will abort
-	static constexpr unsigned long MIN_PERIOD_US = 100;
+	// Minimum time for a bit or processing will abort
+	static constexpr unsigned long MIN_BIT_US = 100;
 
 	static constexpr unsigned int MAX_CODES = 10;
 

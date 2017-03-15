@@ -169,7 +169,7 @@ retry:
 		bool postSyncPresent = false;
 
 		if (!data.sampleComplete) {
-			if (duration < MIN_PERIOD_US) {
+			if (duration < MIN_BIT_US) {
 				// Too short
 				goto error;
 			} else if (data.sampleCount < Receiver::MAX_SAMPLES) {
