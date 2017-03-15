@@ -76,7 +76,7 @@ size_t Code::printTo(Print &p) const {
 
 	messageAsString(code, packedTrailingBits);
 
-	n += p.print("{code: \"");
+	n += p.print("message: {code: \"");
 	n += p.print(code);
 	if (packedTrailingBits != 0) {
 		n += p.print('+');

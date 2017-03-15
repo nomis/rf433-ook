@@ -45,6 +45,7 @@
  * or implied, of Randy Simons.
  */
 
+#include <limits.h>
 #include <stdint.h>
 
 #include "Receiver.hpp"
@@ -53,11 +54,18 @@ Receiver receiver;
 
 //#define DEBUG_TIMING
 #ifdef DEBUG_TIMING
-unsigned long timeHandlerSyncStandalone = 0;
-unsigned long timeHandlerSyncFollowing = 0;
-unsigned long timeHandlerZero = 0;
-unsigned long timeHandlerOne = 0;
-unsigned long timeHandlerSampleComplete = 0;
+enum HandlerTiming {
+	TIMING_OTHER,
+	TIMING_SYNC_STANDALONE,
+	TIMING_SYNC_FOLLOWING,
+	TIMING_HANDLER_ZERO,
+	TIMING_HANDLER_ONE,
+	TIMING_SAMPLE_COMPLETE,
+	LEN_TIMING
+};
+
+uint8_t handlerTimesMin[LEN_TIMING] = { 255 };
+uint8_t handlerTimesMax[LEN_TIMING] = { 0 };
 #endif
 
 Receiver::Receiver() {
@@ -123,6 +131,9 @@ void Receiver::interruptHandler() {
 	static Code *code = nullptr;
 	unsigned long now = micros();
 	unsigned long duration = now - last;
+#ifdef DEBUG_TIMING
+	HandlerTiming timingType = TIMING_OTHER;
+#endif
 
 retry:
 	if (!sync) {
@@ -148,9 +159,9 @@ retry:
 			// when one message follows another we do more work by
 			// restarting the handler to reset and reinterpret the sync
 			if (preSyncStandalone) {
-				timeHandlerSyncStandalone = micros() - now;
+				timingType = TIMING_SYNC_STANDALONE;
 			} else {
-				timeHandlerSyncFollowing = micros() - now;
+				timingType = TIMING_SYNC_FOLLOWING;
 			}
 #endif
 		} else {
@@ -210,7 +221,7 @@ retry:
 
 					data.sampleComplete = true;
 #ifdef DEBUG_TIMING
-					timeHandlerSampleComplete = micros() - now;
+					timingType = TIMING_SAMPLE_COMPLETE;
 #endif
 				}
 
@@ -229,7 +240,7 @@ retry:
 				code->zeroBitTotalTime += duration;
 				code->zeroBitCount++;
 #ifdef DEBUG_TIMING
-				timeHandlerZero = micros() - now;
+				timingType = TIMING_HANDLER_ZERO;
 #endif
 				goto done;
 			} else if (duration >= minOnePeriod(data)) {
@@ -237,7 +248,7 @@ retry:
 				code->oneBitTotalTime += duration;
 				code->oneBitCount++;
 #ifdef DEBUG_TIMING
-				timeHandlerOne = micros() - now;
+				timingType = TIMING_HANDLER_ONE;
 #endif
 				goto done;
 			} else {
@@ -268,6 +279,21 @@ error:
 
 done:
 	last = now;
+
+#ifdef DEBUG_TIMING
+	unsigned long timingValue = micros() - now;
+	if (timingValue > 255) {
+		timingValue = 255;
+	}
+
+	if (handlerTimesMin[timingType] > timingValue) {
+		handlerTimesMin[timingType] = timingValue;
+	}
+
+	if (handlerTimesMax[timingType] < timingValue) {
+		handlerTimesMax[timingType] = timingValue;
+	}
+#endif
 }
 
 void Receiver::addCode() {
@@ -305,44 +331,65 @@ void Receiver::printCode() {
 #ifdef DEBUG_TIMING
 		timeRead = micros() - timeRead;
 
-		unsigned long copyTimeHandlerSyncStandalone = timeHandlerSyncStandalone;
-		unsigned long copyTimeHandlerSyncFollowing = timeHandlerSyncFollowing;
-		unsigned long copyTimeHandlerZero = timeHandlerZero;
-		unsigned long copyTimeHandlerOne = timeHandlerOne;
-		unsigned long copyTimeHandlerSampleComplete = timeHandlerSampleComplete;
-		timeHandlerSyncStandalone = 0;
-		timeHandlerSyncFollowing = 0;
-		timeHandlerZero = 0;
-		timeHandlerOne = 0;
-		timeHandlerSampleComplete = 0;
+		uint8_t copyHandlerTimesMin[LEN_TIMING];
+		uint8_t copyHandlerTimesMax[LEN_TIMING];
+
+		memcpy(copyHandlerTimesMin, handlerTimesMin, sizeof(handlerTimesMin));
+		memcpy(copyHandlerTimesMax, handlerTimesMax, sizeof(handlerTimesMax));
+		memset(handlerTimesMin, 255, sizeof(handlerTimesMin));
+		memset(handlerTimesMax, 0, sizeof(handlerTimesMax));
 #endif
 		interrupts();
 
 		SerialUSB.println(code);
 
 #ifdef DEBUG_TIMING
-		if (copyTimeHandlerSyncStandalone != 0) {
-			SerialUSB.print("# Sync (standalone) time: ");
-			SerialUSB.println(copyTimeHandlerSyncStandalone);
+		SerialUSB.print("timing: {read: ");
+		SerialUSB.print(timeRead);
+
+		if (copyHandlerTimesMax[TIMING_SYNC_STANDALONE] != 0) {
+			SerialUSB.print(",syncStandalone: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_SYNC_STANDALONE]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_SYNC_STANDALONE]);
+			SerialUSB.print(']');
 		}
-		if (copyTimeHandlerSyncFollowing != 0) {
-			SerialUSB.print("# Sync (following) time: ");
-			SerialUSB.println(copyTimeHandlerSyncFollowing);
+		if (copyHandlerTimesMax[TIMING_SYNC_FOLLOWING] != 0) {
+			SerialUSB.print(",syncFollowing: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_SYNC_FOLLOWING]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_SYNC_FOLLOWING]);
+			SerialUSB.print(']');
 		}
-		if (copyTimeHandlerZero != 0) {
-			SerialUSB.print("# Zero bit time: ");
-			SerialUSB.println(copyTimeHandlerZero);
+		if (copyHandlerTimesMax[TIMING_HANDLER_ZERO] != 0) {
+			SerialUSB.print(",zeroBit: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_HANDLER_ZERO]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_HANDLER_ZERO]);
+			SerialUSB.print(']');
 		}
-		if (copyTimeHandlerOne != 0) {
-			SerialUSB.print("# One bit time: ");
-			SerialUSB.println(copyTimeHandlerOne);
+		if (copyHandlerTimesMax[TIMING_HANDLER_ONE] != 0) {
+			SerialUSB.print(",oneBit: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_HANDLER_ONE]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_HANDLER_ONE]);
+			SerialUSB.print(']');
 		}
-		if (copyTimeHandlerSampleComplete != 0) {
-			SerialUSB.print("# Sample complete processing: ");
-			SerialUSB.println(copyTimeHandlerSampleComplete);
+		if (copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE] != 0) {
+			SerialUSB.print(",sampleComplete: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_SAMPLE_COMPLETE]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE]);
+			SerialUSB.print(']');
 		}
-		SerialUSB.print("# Lookup and copy: ");
-		SerialUSB.println(timeRead);
+		if (copyHandlerTimesMax[TIMING_OTHER] != 0) {
+			SerialUSB.print(",other: [");
+			SerialUSB.print(copyHandlerTimesMin[TIMING_OTHER]);
+			SerialUSB.print(',');
+			SerialUSB.print(copyHandlerTimesMax[TIMING_OTHER]);
+			SerialUSB.print(']');
+		}
+		SerialUSB.println("}");
 #endif
 
 		return;
