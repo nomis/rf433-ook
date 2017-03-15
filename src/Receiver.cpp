@@ -145,9 +145,7 @@ retry:
 			data.oneTime = 0;
 			data.sampleComplete = false;
 			code->zeroBitTotalTime = 0;
-			code->zeroBitCount = 0;
 			code->oneBitTotalTime = 0;
-			code->oneBitCount = 0;
 			data.start = last;
 			code->preSyncTime = duration;
 			data.minSyncPeriod = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
@@ -208,11 +206,9 @@ retry:
 						if (data.bitSampleTimes[i] <= maxZeroPeriod(data)) {
 							addBit(code, 0);
 							code->zeroBitTotalTime += data.bitSampleTimes[i];
-							code->zeroBitCount++;
 						} else if (data.bitSampleTimes[i] >= minOnePeriod(data)) {
 							addBit(code, 1);
 							code->oneBitTotalTime += duration;
-							code->oneBitCount++;
 						} else {
 							// Oops
 							goto error;
@@ -238,7 +234,6 @@ retry:
 			if (duration <= maxZeroPeriod(data)) {
 				addBit(code, 0);
 				code->zeroBitTotalTime += duration;
-				code->zeroBitCount++;
 #ifdef DEBUG_TIMING
 				timingType = TIMING_HANDLER_ZERO;
 #endif
@@ -246,7 +241,6 @@ retry:
 			} else if (duration >= minOnePeriod(data)) {
 				addBit(code, 1);
 				code->oneBitTotalTime += duration;
-				code->oneBitCount++;
 #ifdef DEBUG_TIMING
 				timingType = TIMING_HANDLER_ONE;
 #endif

@@ -42,6 +42,7 @@ protected:
 	uint8_t messageTrailingCount() const;
 	uint8_t messageTrailingValue() const;
 	void messageAsString(String &code, char &packedTrailingBits) const;
+	void messageCountBits(unsigned int &zeroBitCount, unsigned int &oneBitCount) const;
 
 	size_t printHomeEasyV1A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
 	size_t printHomeEasyV2A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
@@ -52,9 +53,7 @@ protected:
 	unsigned long preSyncTime;
 	unsigned long postSyncTime;
 	unsigned long zeroBitTotalTime;
-	unsigned int zeroBitCount;
 	unsigned long oneBitTotalTime;
-	unsigned int oneBitCount;
 	unsigned int trailingBitCount : 2;
 	unsigned int trailingBitsValue : 3;
 	bool preSyncStandalone : 1;

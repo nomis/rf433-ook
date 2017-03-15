@@ -68,13 +68,44 @@ void Code::messageAsString(String &code, char &packedTrailingBits) const {
 			: (char)('A' + (packedTrailingBits - 10));
 }
 
+void Code::messageCountBits(unsigned int &zeroBitCount, unsigned int &oneBitCount) const {
+	uint8_t value;
+
+	zeroBitCount = 0;
+	oneBitCount = 0;
+
+	for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+		value = messageValueAt(i);
+
+		for (uint_fast8_t bit = 0; bit < 4; bit++) {
+			if (value & (1 << bit)) {
+				oneBitCount++;
+			} else {
+				zeroBitCount++;
+			}
+		}
+	}
+
+	value = messageTrailingValue();
+	for (uint_fast8_t bit = 0; bit < 3; bit++) {
+		if (value & (1 << bit)) {
+			oneBitCount++;
+		} else {
+			zeroBitCount++;
+		}
+	}
+}
+
 size_t Code::printTo(Print &p) const {
 	size_t n = 0;
 	bool first = true;
 	String code;
 	char packedTrailingBits;
+	unsigned int zeroBitCount;
+	unsigned int oneBitCount;
 
 	messageAsString(code, packedTrailingBits);
+	messageCountBits(zeroBitCount, oneBitCount);
 
 	n += p.print("message: {code: \"");
 	n += p.print(code);
