@@ -92,7 +92,7 @@ struct ReceiverTiming {
 
 	// Timing
 	unsigned long bitTime[2];
-	unsigned long minSyncPeriod, maxSyncPeriod;
+	unsigned long minSyncTime, maxSyncTime;
 
 	// Message
 	unsigned long start;
@@ -152,6 +152,7 @@ retry:
 	if (!sync) {
 		if (duration >= MIN_PRE_SYNC_US) {
 			code = &receiver.codes[receiver.codeWriteIndex];
+
 			data.sampleMinTime[0] = ~0;
 			data.sampleMinTime[1] = ~0;
 			data.sampleMaxTime[0] = 0;
@@ -164,8 +165,13 @@ retry:
 			code->bitTotalTime[1] = 0;
 			data.start = last;
 			code->preSyncTime = duration;
-			data.minSyncPeriod = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
-			data.maxSyncPeriod = duration * MAX_POST_SYNC_DURATION / Receiver::DIVISOR;
+			data.minSyncTime = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
+			data.maxSyncTime = duration * MAX_POST_SYNC_DURATION / Receiver::DIVISOR;
+
+			if (data.minSyncTime < MIN_PRE_SYNC_US) {
+				data.minSyncTime = MIN_PRE_SYNC_US;
+			}
+
 			sync = true;
 
 #ifdef DEBUG_TIMING
@@ -277,7 +283,7 @@ retry:
 
 				goto done;
 			}
-		} else if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
+		} else if (duration >= data.minSyncTime && duration <= data.maxSyncTime) {
 			postSyncPresent = true;
 		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
 			if (duration <= maxZeroPeriod(data)) {

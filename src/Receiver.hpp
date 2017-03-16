@@ -52,7 +52,7 @@ protected:
 	static constexpr unsigned long RELATIVE_DURATION = 14;
 
 	// Relative duration compared to pre sync duration
-	static constexpr unsigned long MIN_POST_SYNC_DURATION = 6;
+	static constexpr unsigned long MIN_POST_SYNC_DURATION = 4;
 	static constexpr unsigned long MAX_POST_SYNC_DURATION = 32;
 
 	// Minimum time for an initial sync or processing will be ignored
