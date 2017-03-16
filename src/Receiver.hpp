@@ -29,7 +29,7 @@ public:
 	Receiver();
 	virtual ~Receiver();
 	void attach(int pin);
-	void printCode();
+	void printCode(Stream &output);
 
 	// All durations are specified as the numerator of a fractional number
 	// with the following denominator (divisor), which must be a power of 2
@@ -69,7 +69,7 @@ protected:
 
 private:
 	static void interruptHandler();
-	static void addBit(Code *code, bool bit, const unsigned long &duration);
+	static void addBit(Code *code, uint8_t bit, const unsigned long &duration);
 	void addCode();
 } __attribute__((packed));
 

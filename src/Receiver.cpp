@@ -80,6 +80,7 @@ Receiver::~Receiver() {
 }
 
 void Receiver::attach(int pin) {
+	pinMode(pin, INPUT);
 	attachInterrupt(digitalPinToInterrupt(pin), interruptHandler, CHANGE);
 }
 
@@ -115,7 +116,7 @@ static inline unsigned long maxOnePeriod(const ReceiverTiming &data) {
 	return data.bitTime[1] * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR;
 }
 
-inline void Receiver::addBit(Code *code, bool bit, const unsigned long &duration) {
+inline void Receiver::addBit(Code *code, uint8_t bit, const unsigned long &duration) {
 	const uint8_t value = 0x80 >> (code->messageLength & 0x07);
 
 	if (bit) {
@@ -357,7 +358,7 @@ void Receiver::addCode() {
 	}
 }
 
-void Receiver::printCode() {
+void Receiver::printCode(Stream &output) {
 	noInterrupts();
 #ifdef DEBUG_TIMING
 	unsigned long timeRead = micros();
@@ -383,69 +384,70 @@ void Receiver::printCode() {
 #endif
 		interrupts();
 
-		SerialUSB.println(code);
+		output.print("receive: ");
+		output.println(code);
 
 #ifdef DEBUG_TIMING
-		SerialUSB.print("timing: {read: ");
-		SerialUSB.print(timeRead);
+		output.print("timing: {read: ");
+		output.print(timeRead);
 
 		if (copyHandlerTimesMax[TIMING_SYNC_STANDALONE] != 0) {
-			SerialUSB.print(",syncStandalone: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_SYNC_STANDALONE]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_SYNC_STANDALONE]);
-			SerialUSB.print(']');
+			output.print(",syncStandalone: [");
+			output.print(copyHandlerTimesMin[TIMING_SYNC_STANDALONE]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_SYNC_STANDALONE]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SYNC_FOLLOWING] != 0) {
-			SerialUSB.print(",syncFollowing: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_SYNC_FOLLOWING]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_SYNC_FOLLOWING]);
-			SerialUSB.print(']');
+			output.print(",syncFollowing: [");
+			output.print(copyHandlerTimesMin[TIMING_SYNC_FOLLOWING]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_SYNC_FOLLOWING]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_HANDLER_ZERO] != 0) {
-			SerialUSB.print(",zeroBit: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_HANDLER_ZERO]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_HANDLER_ZERO]);
-			SerialUSB.print(']');
+			output.print(",zeroBit: [");
+			output.print(copyHandlerTimesMin[TIMING_HANDLER_ZERO]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_HANDLER_ZERO]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_HANDLER_ONE] != 0) {
-			SerialUSB.print(",oneBit: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_HANDLER_ONE]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_HANDLER_ONE]);
-			SerialUSB.print(']');
+			output.print(",oneBit: [");
+			output.print(copyHandlerTimesMin[TIMING_HANDLER_ONE]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_HANDLER_ONE]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_ZERO] != 0) {
-			SerialUSB.print(",sampleZero: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_SAMPLE_ZERO]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_SAMPLE_ZERO]);
-			SerialUSB.print(']');
+			output.print(",sampleZero: [");
+			output.print(copyHandlerTimesMin[TIMING_SAMPLE_ZERO]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_SAMPLE_ZERO]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_ONE] != 0) {
-			SerialUSB.print(",sampleOne: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_SAMPLE_ONE]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_SAMPLE_ONE]);
-			SerialUSB.print(']');
+			output.print(",sampleOne: [");
+			output.print(copyHandlerTimesMin[TIMING_SAMPLE_ONE]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_SAMPLE_ONE]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE] != 0) {
-			SerialUSB.print(",sampleComplete: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_SAMPLE_COMPLETE]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE]);
-			SerialUSB.print(']');
+			output.print(",sampleComplete: [");
+			output.print(copyHandlerTimesMin[TIMING_SAMPLE_COMPLETE]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE]);
+			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_OTHER] != 0) {
-			SerialUSB.print(",other: [");
-			SerialUSB.print(copyHandlerTimesMin[TIMING_OTHER]);
-			SerialUSB.print(',');
-			SerialUSB.print(copyHandlerTimesMax[TIMING_OTHER]);
-			SerialUSB.print(']');
+			output.print(",other: [");
+			output.print(copyHandlerTimesMin[TIMING_OTHER]);
+			output.print(',');
+			output.print(copyHandlerTimesMax[TIMING_OTHER]);
+			output.print(']');
 		}
-		SerialUSB.println("}");
+		output.println("}");
 #endif
 
 		return;

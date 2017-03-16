@@ -29,6 +29,62 @@ Code::~Code() {
 
 }
 
+Code::Code(const char *message) {
+	bool trailing = false;
+
+	valid = false;
+	messageLength = 0;
+	memset(this->message, 0, sizeof(this->message));
+
+	for (uint_fast8_t i = 0; message[i] != 0; i++) {
+		if ((message[i] >= '0' && message[i] <= '9') || (message[i] >= 'A' && message[i] <= 'F')) {
+			uint8_t value = message[i] < 'A' ? (message[i] - '0') : ((message[i] - 'A') + 10);
+
+			if (trailing) {
+				if (value & 0x8) {
+					if (messageLength + 3 <= MAX_LENGTH) {
+						this->message[messageLength / 8] |= (value & 0x7) << 5;
+						messageLength += 3;
+					}
+				} else if (value & 0x4) {
+					if (messageLength + 2 <= MAX_LENGTH) {
+						this->message[messageLength / 8] |= (value & 0x3) << 6;
+						messageLength += 2;
+					}
+				} else if (value & 0x2) {
+					if (messageLength + 1 <= MAX_LENGTH) {
+						this->message[messageLength / 8] |= (value & 0x1) << 7;
+						messageLength++;
+					}
+				}
+			} else {
+				if (messageLength + 4 <= MAX_LENGTH) {
+					this->message[messageLength / 8] |= value << (4 - (messageLength & 0x4));
+					messageLength += 4;
+				}
+			}
+		} else if (message[i] == '+') {
+			if (message[i + 1] == 0 || message[i + 2] != 0) {
+				return;
+			}
+
+			trailing = true;
+		} else {
+			return;
+		}
+	}
+
+	duration = 0;
+	preSyncTime = 0;
+	postSyncTime = 0;
+	bitTotalTime[0] = 0;
+	bitTotalTime[1] = 0;
+	preSyncStandalone = true;
+	postSyncPresent = true;
+
+	valid = messageLength >= MIN_LENGTH;
+}
+
 bool Code::isValid() const {
 	return valid;
 }
@@ -107,7 +163,7 @@ size_t Code::printTo(Print &p) const {
 	messageAsString(code, packedTrailingBits);
 	messageCountBits(zeroBitCount, oneBitCount);
 
-	n += p.print("message: {code: \"");
+	n += p.print("{code: \"");
 	n += p.print(code);
 	if (packedTrailingBits != 0) {
 		n += p.print('+');
@@ -117,8 +173,12 @@ size_t Code::printTo(Print &p) const {
 	n += p.print(preSyncStandalone ? "standalone" : "following");
 	n += p.print("\",postSync: \"");
 	n += p.print(postSyncPresent ? "present" : "missing");
-	n += p.print("\",duration: ");
-	n += p.print(duration);
+	n += p.print('\"');
+
+	if (duration) {
+		n += p.print(",duration: ");
+		n += p.print(duration);
+	}
 
 	if (preSyncTime) {
 		n += p.print(",preSyncTime: ");
@@ -130,12 +190,12 @@ size_t Code::printTo(Print &p) const {
 		n += p.print(postSyncTime);
 	}
 
-	if (zeroBitCount) {
+	if (bitTotalTime[0] && zeroBitCount) {
 		n += p.print(",zeroBitDuration: ");
 		n += p.print(bitTotalTime[0] / zeroBitCount);
 	}
 
-	if (oneBitCount) {
+	if (bitTotalTime[1] && oneBitCount) {
 		n += p.print(",oneBitDuration: ");
 		n += p.print(bitTotalTime[1] / oneBitCount);
 	}

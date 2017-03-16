@@ -28,14 +28,18 @@ class Code: public Printable {
 
 public:
 	Code();
+	Code(const char *message);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
+	bool isValid() const;
 
 	static constexpr uint8_t MIN_LENGTH = 12 * 4;
 	static constexpr uint8_t MAX_LENGTH = 48 * 4;
 
+	uint8_t message[MAX_LENGTH / 8];
+	uint8_t messageLength;
+
 protected:
-	bool isValid() const;
 	void setValid(bool valid);
 
 	uint8_t messageValueAt(uint8_t index) const;
@@ -47,8 +51,6 @@ protected:
 	size_t printHomeEasyV1A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
 	size_t printHomeEasyV2A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
 
-	uint8_t message[MAX_LENGTH / 8];
-	uint8_t messageLength;
 	unsigned long duration;
 	unsigned long preSyncTime;
 	unsigned long postSyncTime;

@@ -20,6 +20,7 @@
 
 #include "Main.hpp"
 #include "Receiver.hpp"
+#include "Transmitter.hpp"
 
 static int freeMemory() {
 	extern int __heap_start, *__brkval;
@@ -42,22 +43,36 @@ static void checkFreeMemory() {
 	}
 }
 
+Transmitter transmitter(TX_PIN);
+
 void setup() {
 	if (RX_ENABLED) {
 		receiver.attach(RX_PIN);
 	}
 
-	output.begin(OUTPUT_BAUD_RATE);
+	if (TX_ENABLED) {
+		transmitter.init();
+	}
+
+	console.begin(CONSOLE_BAUD_RATE);
 }
 
 void loop() {
-	if (SerialUSB) {
+	if (console) {
 		checkFreeMemory();
 
 		if (RX_ENABLED) {
-			receiver.printCode();
+			static unsigned long last = millis();
+			unsigned long now = millis();
+
+			if (now - last >= 20) {
+				last = now;
+				receiver.printCode(console);
+			}
+		}
+
+		if (TX_ENABLED) {
+			transmitter.processInput(console);
 		}
 	}
-
-	delay(20);
 }
