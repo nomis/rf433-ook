@@ -36,7 +36,7 @@ public:
 	static constexpr uint8_t MIN_LENGTH = 12 * 4;
 	static constexpr uint8_t MAX_LENGTH = 48 * 4;
 
-	uint8_t message[MAX_LENGTH / 8];
+	uint8_t message[(MAX_LENGTH + 7) / 8];
 	uint8_t messageLength;
 
 protected:

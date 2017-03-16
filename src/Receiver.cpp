@@ -184,7 +184,9 @@ retry:
 	} else {
 		bool postSyncPresent = false;
 
-		if (!data.sampleComplete) {
+		if (code->messageLength == Code::MAX_LENGTH) {
+			// Code too long
+		} else if (!data.sampleComplete) {
 			if (duration < MIN_BIT_US) {
 				// Too short
 				goto error;
@@ -226,7 +228,7 @@ retry:
 					swap(code->bitTotalTime);
 
 					// Invert previously stored bits
-					for (uint_fast8_t i = 0; i < (code->messageLength >> 3) + 1; i++) {
+					for (uint_fast8_t i = 0; i < ((code->messageLength + 7) >> 3); i++) {
 						code->message[i] = ~code->message[i];
 					}
 
@@ -277,8 +279,6 @@ retry:
 			}
 		} else if (duration >= data.minSyncPeriod && duration <= data.maxSyncPeriod) {
 			postSyncPresent = true;
-		} else if (code->messageLength == sizeof(code->message) * 8) {
-			// Code too long
 		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
 			if (duration <= maxZeroPeriod(data)) {
 				addBit(code, 0, duration);
