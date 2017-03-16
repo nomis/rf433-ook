@@ -20,6 +20,7 @@
 
 #include "Code.hpp"
 #include "Receiver.hpp"
+#include "Transmitter.hpp"
 
 Code::Code() {
 	valid = false;
@@ -29,13 +30,43 @@ Code::~Code() {
 
 }
 
-Code::Code(const char *message) {
+Code::Code(char *message) {
+	unsigned int messageParts = 0;
 	bool trailing = false;
 
 	valid = false;
 	messageLength = 0;
 	memset(this->message, 0, sizeof(this->message));
 
+	// Find preamble time
+	preambleTime[0] = 0;
+	preambleTime[1] = 0;
+	for (char *parse = message, *saveptr = nullptr, *token;
+			(token = strtok_r(parse, "-", &saveptr)) != nullptr;
+			parse = nullptr) {
+		if (messageParts < 2) {
+			if (strlen(token) > 0) {
+				char *endptr = nullptr;
+				unsigned long value = strtoul(token, &endptr, 10);
+
+				if (strlen(endptr) == 0) {
+					if (value <= Transmitter::MAX_PREAMBLE_US) {
+						preambleTime[messageParts] = value;
+					}
+				}
+			}
+		} else if (messageParts >= 3) {
+			return;
+		}
+		message = token;
+		messageParts++;
+	}
+
+	if (messageParts > 1 && (preambleTime[0] == 0 || preambleTime[1] == 0)) {
+		return;
+	}
+
+	// Encode message
 	for (uint_fast8_t i = 0; message[i] != 0; i++) {
 		if ((message[i] >= '0' && message[i] <= '9') || (message[i] >= 'A' && message[i] <= 'F')) {
 			uint8_t value = message[i] < 'A' ? (message[i] - '0') : ((message[i] - 'A') + 10);
@@ -93,6 +124,110 @@ void Code::setValid(bool valid) {
 	this->valid = valid;
 }
 
+enum class PreambleType {
+	SHORT,
+	ZERO,
+	MEDIUM,
+	ONE,
+	LONG
+};
+
+bool Code::finalise() {
+	bool hasPreamble;
+	PreambleType preambleType[2];
+	unsigned int zeroBitCount;
+	unsigned int oneBitCount;
+	unsigned long bitTime[2];
+
+	messageCountBits(zeroBitCount, oneBitCount);
+
+	if (zeroBitCount > 0 && oneBitCount > 0) {
+		bitTime[0] = bitTotalTime[0] / zeroBitCount;
+		bitTime[1] = bitTotalTime[1] / oneBitCount;
+
+		for (uint_fast8_t i = 0; i < 2; i++) {
+			if (preambleTime[i] < bitTime[0] * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR) {
+				preambleType[i] = PreambleType::SHORT;
+			} else if (preambleTime[i] > bitTime[1] * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR) {
+				preambleType[i] = PreambleType::LONG;
+			} else if (preambleTime[i] <= bitTime[0] * Receiver::MAX_ZERO_DURATION / Receiver::DIVISOR) {
+				preambleType[i] = PreambleType::ZERO;
+			} else if (preambleTime[i] >= bitTime[1] * Receiver::MIN_ONE_DURATION / Receiver::DIVISOR) {
+				preambleType[i] = PreambleType::ONE;
+			} else {
+				preambleType[i] = PreambleType::MEDIUM;
+			}
+		}
+
+		if (preambleType[0] == PreambleType::ZERO && preambleType[1] >= PreambleType::ONE) {
+			if (preambleTime[1] > preambleTime[0] * Receiver::PREAMBLE_RELATIVE_DURATION / Receiver::DIVISOR) {
+				hasPreamble = true;
+			} else if (preambleType[1] == PreambleType::ONE) {
+				hasPreamble = false;
+			} else {
+				// Invalid timing of non-preamble bits
+				return false;
+			}
+		} else {
+			// Invalid timing of bits
+			return false;
+		}
+	} else {
+		// No data
+		return false;
+	}
+
+	if (hasPreamble) {
+		// Nothing to do
+	} else {
+		int preambleBits[2] = {
+			(preambleType[0] == PreambleType::ONE) ? 1 : 0,
+			(preambleType[1] == PreambleType::ONE) ? 1 : 0
+		};
+
+		// Add the preamble times to the bit total times
+		bitTotalTime[preambleBits[0]] += preambleTime[0];
+		bitTotalTime[preambleBits[1]] += preambleTime[1];
+
+		// Move all the bits up
+		for (uint_fast8_t i = sizeof(message) - 1; i > 0; i--) {
+			message[i] = ((message[i - 1] << 6) & 0xC0) | ((message[i] >> 2) & 0x3F);
+		}
+		message[0] >>= 2;
+
+		// Add the preamble bits
+		message[0] |= preambleBits[0] ? 0x80 : 0;
+		message[0] |= preambleBits[1] ? 0x40 : 0;
+		messageLength += 2;
+
+		// Remove preamble times
+		preambleTime[0] = 0;
+		preambleTime[1] = 0;
+	}
+
+	if (messageTrailingCount() == 3) {
+		// Guess the missing final bit based on the other 4-bit values in the message
+		const uint8_t trailingValue = messageTrailingValue();
+		const uint8_t finalBit = 0x80 >> (messageLength & 0x07);
+		bool values[1 << 4] = { false };
+
+		for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+			values[messageValueAt(i)] = true;
+		}
+
+		if (values[(trailingValue << 1) | 1]) {
+			message[messageLength / 8] |= finalBit;
+		} else {
+			message[messageLength / 8] |= ~finalBit;
+		}
+
+		messageLength++;
+		bitTotalTime[finalBit] += bitTime[finalBit];
+	}
+
+	return true;
+}
+
 uint8_t inline Code::messageValueAt(uint8_t index) const {
 	return (message[index / 2] >> ((index & 1) ? 0 : 4)) & 0xF;
 }
@@ -118,10 +253,14 @@ void Code::messageAsString(String &code, char &packedTrailingBits) const {
 	}
 
 	// Re-pack the trailing bits for shorter output
-	packedTrailingBits = (1 << messageTrailingCount()) | messageTrailingValue();
-	packedTrailingBits = (packedTrailingBits < 10)
-			? (char)('0' + packedTrailingBits)
-			: (char)('A' + (packedTrailingBits - 10));
+	if (messageTrailingCount() > 0) {
+		packedTrailingBits = (1 << messageTrailingCount()) | messageTrailingValue();
+		packedTrailingBits = (packedTrailingBits < 10)
+				? (char)('0' + packedTrailingBits)
+				: (char)('A' + (packedTrailingBits - 10));
+	} else {
+		packedTrailingBits = 0;
+	}
 }
 
 void Code::messageCountBits(unsigned int &zeroBitCount, unsigned int &oneBitCount) const {
@@ -164,6 +303,12 @@ size_t Code::printTo(Print &p) const {
 	messageCountBits(zeroBitCount, oneBitCount);
 
 	n += p.print("{code: \"");
+	if (preambleTime[0] || preambleTime[1]) {
+		n += p.print(preambleTime[0]);
+		n += p.print('-');
+		n += p.print(preambleTime[1]);
+		n += p.print('-');
+	}
 	n += p.print(code);
 	if (packedTrailingBits != 0) {
 		n += p.print('+');
@@ -224,7 +369,7 @@ size_t Code::printHomeEasyV1A(bool &first, const String &code, Print &p) const {
 	int8_t device = -1;
 	String action;
 
-	if (code.length() != 12 || messageTrailingCount() != 1 || messageTrailingValue() != 0x0) {
+	if (code.length() != 12) {
 		goto out;
 	}
 
@@ -305,24 +450,26 @@ out:
 size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 	size_t n = 0;
 	String decoded;
-	uint32_t group = 0;
-	uint8_t device;
+	int32_t group = 0;
+	int8_t device = -1;
 	int8_t dimLevel = -1;
 	String action;
 
-	if ((code.length() != 32 && code.length() != 36) || (messageTrailingCount() & 0x1) != 1 || (messageTrailingValue() & 0x1) != 0x0)
+	if (code.length() != 32 && code.length() != 36)
 		goto out;
 
 	for (const char c : code) {
 		switch (c) {
-		case '4':
-		case '0':
+		case '1':
 			decoded += '0';
 			break;
 
-		case '5':
-		case '1':
+		case '4':
 			decoded += '1';
+			break;
+
+		case '0':
+			decoded += '2';
 			break;
 
 		default:
@@ -330,23 +477,54 @@ size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 		}
 	}
 
-	for (uint_fast8_t i = 0; i <= 25; i++) {
-		group |= (uint32_t)(uint8_t)(decoded[25 - i] - '0') << i;
+	if (decoded.substring(0, 26).indexOf('2') == -1) {
+		group = 0;
+		for (uint_fast8_t i = 0; i <= 25; i++) {
+			group |= (uint32_t)(uint8_t)(decoded[25 - i] - '0') << i;
+		}
 	}
 
-	action = (decoded[26] == '1' ? "group " : "");
-	action += (decoded[27] == '1' ? "on" : "off");
+	switch (decoded[27]) {
+	case '0':
+		action = "off";
+		break;
 
-	device = ((uint8_t)(decoded[28] - '0') << 3)
-		| ((uint8_t)(decoded[29] - '0') << 2)
-		| ((uint8_t)(decoded[30] - '0') << 1)
-		| (uint8_t)(decoded[31] - '0');
+	case '1':
+		action = "on";
+		break;
+
+	case '2':
+		action = "dim";
+		break;
+	}
+
+	switch (decoded[26]) {
+	case '0':
+		break;
+
+	case '1':
+		action = "group " + action;
+		break;
+
+	default:
+		action = "";
+		break;
+	}
+
+	if (decoded.substring(28, 32).indexOf('2') == -1) {
+		device = ((uint8_t)(decoded[28] - '0') << 3)
+			| ((uint8_t)(decoded[29] - '0') << 2)
+			| ((uint8_t)(decoded[30] - '0') << 1)
+			| (uint8_t)(decoded[31] - '0');
+	}
 
 	if (code.length() == 36) {
-		dimLevel = ((uint8_t)(decoded[32] - '0') << 3)
-			| ((uint8_t)(decoded[33] - '0') << 2)
-			| ((uint8_t)(decoded[34] - '0') << 1)
-			| (uint8_t)(decoded[35] - '0');
+		if (decoded.substring(32, 36).indexOf('2') == -1) {
+			dimLevel = ((uint8_t)(decoded[32] - '0') << 3)
+				| ((uint8_t)(decoded[33] - '0') << 2)
+				| ((uint8_t)(decoded[34] - '0') << 1)
+				| (uint8_t)(decoded[35] - '0');
+		}
 	}
 
 	if (first) {
@@ -357,13 +535,20 @@ size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 
 	n += p.print("HomeEasyV2A: {code: \"");
 	n += p.print(decoded);
-	n += p.print("\",group: ");
-	n += p.print(group);
-	n += p.print(",device: ");
-	n += p.print(device);
-	n += p.print(",action: \"");
-	n += p.print(action);
 	n += p.print('\"');
+	if (group != -1) {
+		n += p.print(",group: ");
+		n += p.print(group);
+	}
+	if (device != -1) {
+		n += p.print(",device: ");
+		n += p.print(device);
+	}
+	if (action != "") {
+		n += p.print(",action: \"");
+		n += p.print(action);
+		n += p.print('\"');
+	}
 	if (dimLevel != -1) {
 		n += p.print(",dimLevel: ");
 		n += p.print(dimLevel * 67 / 10);

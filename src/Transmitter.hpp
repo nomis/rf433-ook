@@ -31,6 +31,8 @@ public:
 	void init() const;
 	void processInput(Stream &console);
 
+	static constexpr unsigned long MAX_PREAMBLE_US = 10000;
+
 protected:
 	static constexpr uint8_t MAX_LENGTH = 100;
 	static constexpr unsigned long MAX_BIT_US = 5000;

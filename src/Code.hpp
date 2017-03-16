@@ -30,19 +30,22 @@ class Code: public Printable {
 
 public:
 	Code();
-	Code(const char *message);
+	Code(char *message);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 	bool isValid() const;
 
-	static constexpr uint8_t MIN_LENGTH = 12 * 4;
-	static constexpr uint8_t MAX_LENGTH = 48 * 4;
+	// Without the 2 bits that are handled as the preamble times
+	static constexpr uint8_t MIN_LENGTH = 12 * 4 - 2;
+	static constexpr uint8_t MAX_LENGTH = 48 * 4 - 2;
 
-	uint8_t message[(MAX_LENGTH + 7) / 8];
+	unsigned long preambleTime[2];
+	uint8_t message[(MAX_LENGTH + 7 + 2) / 8]; // Add 2 bits extra space for the preamble bits during finalisation
 	uint8_t messageLength;
 
 protected:
 	void setValid(bool valid);
+	bool finalise();
 
 	uint8_t messageValueAt(uint8_t index) const;
 	uint8_t messageTrailingCount() const;

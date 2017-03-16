@@ -166,6 +166,8 @@ retry:
 			data.sampleMaxTime[1] = 0;
 			data.sampleComplete = false;
 			code->messageLength = 0;
+			code->preambleTime[0] = 0;
+			code->preambleTime[1] = 0;
 			data.bitTime[0] = 0;
 			data.bitTime[1] = 0;
 			code->bitTotalTime[0] = 0;
@@ -197,8 +199,15 @@ retry:
 	} else {
 		bool postSyncPresent = false;
 
-		if (code->messageLength == Code::MAX_LENGTH) {
+		// Check max length (but we can't receive the final bit)
+		if (code->messageLength == Code::MAX_LENGTH - 1) {
 			// Code too long
+		} else if (code->preambleTime[0] == 0) {
+			code->preambleTime[0] = duration;
+			goto done;
+		} else if (code->preambleTime[1] == 0) {
+			code->preambleTime[1] = duration;
+			goto done;
 		} else if (!data.sampleComplete) {
 			if (duration < MIN_BIT_US) {
 				// Too short
@@ -214,7 +223,7 @@ retry:
 #ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_ZERO;
 #endif
-				} else if (duration >= data.bitTime[0] * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
+				} else if (duration >= data.bitTime[0] * Receiver::MIN_RELATIVE_DURATION / Receiver::DIVISOR) {
 					if (data.bitTime[1] == 0) {
 						// This bit looks like a 1-bit relative to the duration of the
 						// currently known 0-bit, this is now the duration of the 1-bit
@@ -229,7 +238,7 @@ retry:
 #ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_ONE;
 #endif
-				} else if (data.bitTime[0] >= duration * Receiver::RELATIVE_DURATION / Receiver::DIVISOR) {
+				} else if (data.bitTime[0] >= duration * Receiver::MIN_RELATIVE_DURATION / Receiver::DIVISOR) {
 					// If the currently known 0-bit looks like a 1-bit relative to
 					// this bit then the previous bits were 1-bits and this is now
 					// the duration of the 0-bit
@@ -312,7 +321,8 @@ retry:
 			// Invalid duration
 		}
 
-		if (code->messageLength >= Code::MIN_LENGTH) {
+		// Check min length (but we can't receive the final bit)
+		if (code->messageLength >= Code::MIN_LENGTH - 1) {
 			code->duration = now - data.start;
 			code->postSyncTime = duration;
 			code->preSyncStandalone = preSyncStandalone;
@@ -397,10 +407,12 @@ void Receiver::printCode(Stream &output) {
 #endif
 		interrupts();
 
-		output.print("receive: ");
-		output.println(code);
-
 #ifdef TRACE_BITS
+		output.print("# -2\t");
+		output.println(code.preambleTime[0]);
+		output.print("# -1\t");
+		output.println(code.preambleTime[1]);
+
 		for (uint_fast8_t i = 0; i < code.messageLength; i++) {
 			output.print("# ");
 			output.print(i);
@@ -411,6 +423,11 @@ void Receiver::printCode(Stream &output) {
 			output.println();
 		}
 #endif
+
+		if (code.finalise()) {
+			output.print("receive: ");
+			output.println(code);
+		}
 
 #ifdef DEBUG_TIMING
 		output.print("timing: {read: ");

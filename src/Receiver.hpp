@@ -37,10 +37,13 @@ public:
 	static constexpr unsigned long DIVISOR = 1 << 3;
 
 	// Relative duration compared to sampled bit periods
-	static constexpr unsigned long MIN_ZERO_DURATION = 4;
-	static constexpr unsigned long MAX_ZERO_DURATION = 12;
-	static constexpr unsigned long MIN_ONE_DURATION = 4;
-	static constexpr unsigned long MAX_ONE_DURATION = 12;
+	static constexpr unsigned long MIN_ZERO_DURATION = 6;
+	static constexpr unsigned long MAX_ZERO_DURATION = 10;
+	static constexpr unsigned long MIN_ONE_DURATION = 6;
+	static constexpr unsigned long MAX_ONE_DURATION = 10;
+
+	// Relative duration of the 1-bit compared to the 0-bit for a preabmle
+	static constexpr unsigned long PREAMBLE_RELATIVE_DURATION = 64;
 
 	// Sample bits until at least this many (to get the best average duration)
 	static constexpr unsigned long MIN_SAMPLES = 8;
@@ -49,7 +52,7 @@ public:
 
 protected:
 	// Minimum relative size of a 1-bit compared to a 0-bit
-	static constexpr unsigned long RELATIVE_DURATION = 14;
+	static constexpr unsigned long MIN_RELATIVE_DURATION = 14;
 
 	// Relative duration compared to pre sync duration
 	static constexpr unsigned long MIN_POST_SYNC_DURATION = 4;

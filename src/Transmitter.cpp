@@ -167,6 +167,11 @@ void Transmitter::transmit(const Code &code) {
       togglePin(state, interSyncTime);
     }
 
+    if (code.preambleTime[0] || code.preambleTime[1]) {
+      togglePin(state, code.preambleTime[0]);
+      togglePin(state, code.preambleTime[1]);
+    }
+
     for (uint_fast8_t i = 0; i < code.messageLength; i++) {
       uint8_t bit = code.message[i / 8] & (0x80 >> (i & 0x7)) ? 1 : 0;
 
