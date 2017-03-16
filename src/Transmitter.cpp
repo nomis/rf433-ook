@@ -90,7 +90,7 @@ void Transmitter::processLine(Stream &console) {
         break;
 
       case 'R':
-        if (value <= MAX_REPEAT) {
+        if (value > 0 && value <= MAX_REPEAT) {
           repeat = value;
           configured = true;
         }
