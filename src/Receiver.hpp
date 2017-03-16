@@ -61,7 +61,7 @@ protected:
 	// Minimum time for a bit or processing will abort
 	static constexpr unsigned long MIN_BIT_US = 100;
 
-	static constexpr unsigned int MAX_CODES = 10;
+	static constexpr unsigned int MAX_CODES = 16;
 
 	Code codes[MAX_CODES];
 	uint_fast8_t codeReadIndex = 0;
