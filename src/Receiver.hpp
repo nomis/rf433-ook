@@ -43,9 +43,9 @@ public:
 	static constexpr unsigned long MAX_ONE_DURATION = 12;
 
 	// Sample bits until at least this many (to get the best average duration)
-	static constexpr unsigned long MIN_SAMPLES = 6;
+	static constexpr unsigned long MIN_SAMPLES = 8;
 	// Continue sampling until this many bits (if the 1-bit duration is still unknown)
-	static constexpr unsigned long MAX_SAMPLES = 16;
+	static constexpr unsigned long MAX_SAMPLES = 32;
 
 protected:
 	// Minimum relative size of a 1-bit compared to a 0-bit
