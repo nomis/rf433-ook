@@ -310,7 +310,7 @@ size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 	int8_t dimLevel = -1;
 	String action;
 
-	if ((code.length() != 32 && code.length() != 36) || messageTrailingCount() != 3 || (messageTrailingValue() & 0x1) != 0x0)
+	if ((code.length() != 32 && code.length() != 36) || (messageTrailingCount() & 0x1) != 1 || (messageTrailingValue() & 0x1) != 0x0)
 		goto out;
 
 	for (const char c : code) {
