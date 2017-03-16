@@ -21,6 +21,8 @@
 
 #include <Arduino.h>
 
+//#define TRACE_BITS
+
 class Receiver;
 
 class Code: public Printable {
@@ -58,6 +60,10 @@ protected:
 	bool preSyncStandalone : 1;
 	bool postSyncPresent : 1;
 	bool valid : 1;
+
+#ifdef TRACE_BITS
+	uint8_t traceBitTimes[MAX_LENGTH];
+#endif
 } __attribute__((packed));
 
 #endif
