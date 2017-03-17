@@ -92,7 +92,6 @@ struct ReceiverTiming {
 
 	// Timing
 	unsigned long bitTime[2];
-	unsigned long minPauseTime, maxPauseTime;
 
 	// Message
 	unsigned long start;
@@ -157,7 +156,7 @@ void Receiver::interruptHandler() {
 
 retry:
 	if (!pause) {
-		if (duration >= MIN_PRE_PAUSE_US) {
+		if (duration >= MIN_PAUSE_US) {
 			code = &receiver.codes[receiver.codeWriteIndex];
 
 			data.sampleMinTime[0] = ~0;
@@ -174,12 +173,6 @@ retry:
 			code->bitTotalTime[1] = 0;
 			data.start = now;
 			code->prePauseTime = duration;
-			data.minPauseTime = duration * MIN_POST_PAUSE_DURATION / Receiver::DIVISOR;
-			data.maxPauseTime = duration * MAX_POST_PAUSE_DURATION / Receiver::DIVISOR;
-
-			if (data.minPauseTime < MIN_PRE_PAUSE_US) {
-				data.minPauseTime = MIN_PRE_PAUSE_US;
-			}
 
 			pause = true;
 
@@ -299,7 +292,7 @@ retry:
 
 				goto done;
 			}
-		} else if (duration >= data.minPauseTime && duration <= data.maxPauseTime) {
+		} else if (duration >= MIN_PAUSE_US) {
 			postPausePresent = true;
 		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
 			if (duration <= maxZeroPeriod(data)) {

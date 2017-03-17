@@ -59,7 +59,7 @@ protected:
 	static constexpr unsigned long MAX_POST_PAUSE_DURATION = 32;
 
 	// Minimum time for an initial pause or processing will be ignored
-	static constexpr unsigned long MIN_PRE_PAUSE_US = 2000;
+	static constexpr unsigned long MIN_PAUSE_US = 4000;
 
 	// Minimum time for a bit or processing will abort
 	static constexpr unsigned long MIN_BIT_US = 100;
