@@ -56,8 +56,8 @@ Receiver receiver;
 #ifdef DEBUG_TIMING
 enum HandlerTiming {
 	TIMING_OTHER,
-	TIMING_SYNC_STANDALONE,
-	TIMING_SYNC_FOLLOWING,
+	TIMING_PAUSE_STANDALONE,
+	TIMING_PAUSE_FOLLOWING,
 	TIMING_HANDLER_ZERO,
 	TIMING_HANDLER_ONE,
 	TIMING_SAMPLE_ZERO,
@@ -92,14 +92,14 @@ struct ReceiverTiming {
 
 	// Timing
 	unsigned long bitTime[2];
-	unsigned long minSyncTime, maxSyncTime;
+	unsigned long minPauseTime, maxPauseTime;
 
 	// Message
 	unsigned long start;
 };
 
-// These take about 4µs each, so it's better to do them every time
-// than to add to the work required to process a sync event
+// These take about 4µs each, so it's better to do some of them
+// every time than to add to the work required to process a pause
 static inline unsigned long minZeroPeriod(const ReceiverTiming &data) {
 	return data.bitTime[0] * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR;
 }
@@ -145,8 +145,8 @@ static inline void swap(T *values) {
 
 void Receiver::interruptHandler() {
 	static unsigned long last = 0;
-	static bool sync = false;
-	static bool preSyncStandalone = true;
+	static bool pause = false;
+	static bool prePauseStandalone = true;
 	static ReceiverTiming data;
 	static Code *code = nullptr;
 	unsigned long now = micros();
@@ -156,8 +156,8 @@ void Receiver::interruptHandler() {
 #endif
 
 retry:
-	if (!sync) {
-		if (duration >= MIN_PRE_SYNC_US) {
+	if (!pause) {
+		if (duration >= MIN_PRE_PAUSE_US) {
 			code = &receiver.codes[receiver.codeWriteIndex];
 
 			data.sampleMinTime[0] = ~0;
@@ -173,31 +173,31 @@ retry:
 			code->bitTotalTime[0] = 0;
 			code->bitTotalTime[1] = 0;
 			data.start = last;
-			code->preSyncTime = duration;
-			data.minSyncTime = duration * MIN_POST_SYNC_DURATION / Receiver::DIVISOR;
-			data.maxSyncTime = duration * MAX_POST_SYNC_DURATION / Receiver::DIVISOR;
+			code->prePauseTime = duration;
+			data.minPauseTime = duration * MIN_POST_PAUSE_DURATION / Receiver::DIVISOR;
+			data.maxPauseTime = duration * MAX_POST_PAUSE_DURATION / Receiver::DIVISOR;
 
-			if (data.minSyncTime < MIN_PRE_SYNC_US) {
-				data.minSyncTime = MIN_PRE_SYNC_US;
+			if (data.minPauseTime < MIN_PRE_PAUSE_US) {
+				data.minPauseTime = MIN_PRE_PAUSE_US;
 			}
 
-			sync = true;
+			pause = true;
 
 #ifdef DEBUG_TIMING
 			// The time taken for each of these is different, because
 			// when one message follows another we do more work by
-			// restarting the handler to reset and reinterpret the sync
-			if (preSyncStandalone) {
-				timingType = TIMING_SYNC_STANDALONE;
+			// restarting the handler to reset and reinterpret the pause
+			if (prePauseStandalone) {
+				timingType = TIMING_PAUSE_STANDALONE;
 			} else {
-				timingType = TIMING_SYNC_FOLLOWING;
+				timingType = TIMING_PAUSE_FOLLOWING;
 			}
 #endif
 		} else {
-			preSyncStandalone = true;
+			prePauseStandalone = true;
 		}
 	} else {
-		bool postSyncPresent = false;
+		bool postPausePresent = false;
 
 		// Check max length (but we can't receive the final bit)
 		if (code->messageLength == Code::MAX_LENGTH - 1) {
@@ -299,8 +299,8 @@ retry:
 
 				goto done;
 			}
-		} else if (duration >= data.minSyncTime && duration <= data.maxSyncTime) {
-			postSyncPresent = true;
+		} else if (duration >= data.minPauseTime && duration <= data.maxPauseTime) {
+			postPausePresent = true;
 		} else if (duration >= minZeroPeriod(data) && duration <= maxOnePeriod(data)) {
 			if (duration <= maxZeroPeriod(data)) {
 				addBit(code, 0, duration);
@@ -324,9 +324,9 @@ retry:
 		// Check min length (but we can't receive the final bit)
 		if (code->messageLength >= Code::MIN_LENGTH - 1) {
 			code->duration = now - data.start;
-			code->postSyncTime = duration;
-			code->preSyncStandalone = preSyncStandalone;
-			code->postSyncPresent = postSyncPresent;
+			code->postPauseTime = duration;
+			code->prePauseStandalone = prePauseStandalone;
+			code->postPausePresent = postPausePresent;
 
 			code = nullptr;
 			receiver.addCode();
@@ -335,9 +335,9 @@ retry:
 		}
 
 error:
-		// Restart, reusing the current sync duration
-		sync = false;
-		preSyncStandalone = !postSyncPresent;
+		// Restart, reusing the current pause duration
+		pause = false;
+		prePauseStandalone = !postPausePresent;
 		goto retry;
 	}
 
@@ -433,18 +433,18 @@ void Receiver::printCode(Stream &output) {
 		output.print("timing: {read: ");
 		output.print(timeRead);
 
-		if (copyHandlerTimesMax[TIMING_SYNC_STANDALONE] != 0) {
-			output.print(",syncStandalone: [");
-			output.print(copyHandlerTimesMin[TIMING_SYNC_STANDALONE]);
+		if (copyHandlerTimesMax[TIMING_PAUSE_STANDALONE] != 0) {
+			output.print(",pauseStandalone: [");
+			output.print(copyHandlerTimesMin[TIMING_PAUSE_STANDALONE]);
 			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_SYNC_STANDALONE]);
+			output.print(copyHandlerTimesMax[TIMING_PAUSE_STANDALONE]);
 			output.print(']');
 		}
-		if (copyHandlerTimesMax[TIMING_SYNC_FOLLOWING] != 0) {
-			output.print(",syncFollowing: [");
-			output.print(copyHandlerTimesMin[TIMING_SYNC_FOLLOWING]);
+		if (copyHandlerTimesMax[TIMING_PAUSE_FOLLOWING] != 0) {
+			output.print(",pauseFollowing: [");
+			output.print(copyHandlerTimesMin[TIMING_PAUSE_FOLLOWING]);
 			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_SYNC_FOLLOWING]);
+			output.print(copyHandlerTimesMax[TIMING_PAUSE_FOLLOWING]);
 			output.print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_HANDLER_ZERO] != 0) {

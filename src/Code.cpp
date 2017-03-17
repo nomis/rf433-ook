@@ -106,12 +106,12 @@ Code::Code(char *message) {
 	}
 
 	duration = 0;
-	preSyncTime = 0;
-	postSyncTime = 0;
+	prePauseTime = 0;
+	postPauseTime = 0;
 	bitTotalTime[0] = 0;
 	bitTotalTime[1] = 0;
-	preSyncStandalone = true;
-	postSyncPresent = true;
+	prePauseStandalone = true;
+	postPausePresent = true;
 
 	valid = messageLength >= MIN_LENGTH;
 }
@@ -314,10 +314,10 @@ size_t Code::printTo(Print &p) const {
 		n += p.print('+');
 		n += p.print(packedTrailingBits);
 	}
-	n += p.print("\",preSync: \"");
-	n += p.print(preSyncStandalone ? "standalone" : "following");
-	n += p.print("\",postSync: \"");
-	n += p.print(postSyncPresent ? "present" : "missing");
+	n += p.print("\",prePause: \"");
+	n += p.print(prePauseStandalone ? "standalone" : "following");
+	n += p.print("\",postPause: \"");
+	n += p.print(postPausePresent ? "present" : "missing");
 	n += p.print('\"');
 
 	if (duration) {
@@ -325,14 +325,14 @@ size_t Code::printTo(Print &p) const {
 		n += p.print(duration);
 	}
 
-	if (preSyncTime) {
-		n += p.print(",preSyncTime: ");
-		n += p.print(preSyncTime);
+	if (prePauseTime) {
+		n += p.print(",prePauseTime: ");
+		n += p.print(prePauseTime);
 	}
 
-	if (postSyncTime) {
-		n += p.print(",postSyncTime: ");
-		n += p.print(postSyncTime);
+	if (postPauseTime) {
+		n += p.print(",postPauseTime: ");
+		n += p.print(postPauseTime);
 	}
 
 	if (bitTotalTime[0] && zeroBitCount) {
@@ -345,7 +345,7 @@ size_t Code::printTo(Print &p) const {
 		n += p.print(bitTotalTime[1] / oneBitCount);
 	}
 
-	if (postSyncPresent) {
+	if (postPausePresent) {
 		n += p.print(",decode: {");
 		n += printHomeEasyV1A(first, code, p);
 		n += printHomeEasyV2A(first, code, p);

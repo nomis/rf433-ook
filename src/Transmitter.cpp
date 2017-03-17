@@ -97,22 +97,22 @@ void Transmitter::processLine(Stream &console) {
         break;
 
       case 'B': // before
-        if (value <= MAX_SYNC_US) {
-          preSyncTime = value;
+        if (value <= MAX_PAUSE_US) {
+          prePauseTime = value;
           configured = true;
         }
         break;
 
       case 'I': // inter
-        if (value <= MAX_SYNC_US) {
-          interSyncTime = value;
+        if (value <= MAX_PAUSE_US) {
+          interPauseTime = value;
           configured = true;
         }
         break;
 
       case 'A': // after
-        if (value <= MAX_SYNC_US) {
-          postSyncTime = value;
+        if (value <= MAX_PAUSE_US) {
+          postPauseTime = value;
           configured = true;
         }
         break;
@@ -141,12 +141,12 @@ void Transmitter::processLine(Stream &console) {
 
 void Transmitter::outputConfiguration(Stream &console) {
   console.print("config: {");
-  console.print("preSyncTime: ");
-  console.print(preSyncTime);
-  console.print(",interSyncTime: ");
-  console.print(interSyncTime);
-  console.print(",postSyncTime: ");
-  console.print(postSyncTime);
+  console.print("prePauseTime: ");
+  console.print(prePauseTime);
+  console.print(",interPauseTime: ");
+  console.print(interPauseTime);
+  console.print(",postPauseTime: ");
+  console.print(postPauseTime);
   console.print(",zeroBitDuration: ");
   console.print(bitTime[0]);
   console.print(",oneBitDuration: ");
@@ -160,11 +160,11 @@ void Transmitter::transmit(const Code &code) {
   uint8_t state = LOW;
 
   digitalWrite(pin, LOW);
-  togglePin(state, preSyncTime);
+  togglePin(state, prePauseTime);
 
   for (uint_fast8_t n = 0; n < repeat; n++) {
     if (n > 0) {
-      togglePin(state, interSyncTime);
+      togglePin(state, interPauseTime);
     }
 
     if (code.preambleTime[0] || code.preambleTime[1]) {
@@ -179,7 +179,7 @@ void Transmitter::transmit(const Code &code) {
     }
   }
 
-  togglePin(state, postSyncTime);
+  togglePin(state, postPauseTime);
   digitalWrite(pin, LOW);
 }
 

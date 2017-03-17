@@ -54,12 +54,12 @@ protected:
 	// Minimum relative size of a 1-bit compared to a 0-bit
 	static constexpr unsigned long MIN_RELATIVE_DURATION = 14;
 
-	// Relative duration compared to pre sync duration
-	static constexpr unsigned long MIN_POST_SYNC_DURATION = 4;
-	static constexpr unsigned long MAX_POST_SYNC_DURATION = 32;
+	// Relative duration compared to pre pause duration
+	static constexpr unsigned long MIN_POST_PAUSE_DURATION = 4;
+	static constexpr unsigned long MAX_POST_PAUSE_DURATION = 32;
 
-	// Minimum time for an initial sync or processing will be ignored
-	static constexpr unsigned long MIN_PRE_SYNC_US = 2000;
+	// Minimum time for an initial pause or processing will be ignored
+	static constexpr unsigned long MIN_PRE_PAUSE_US = 2000;
 
 	// Minimum time for a bit or processing will abort
 	static constexpr unsigned long MIN_BIT_US = 100;

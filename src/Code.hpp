@@ -57,11 +57,11 @@ protected:
 	size_t printHomeEasyV2A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
 
 	unsigned long duration;
-	unsigned long preSyncTime;
-	unsigned long postSyncTime;
+	unsigned long prePauseTime;
+	unsigned long postPauseTime;
 	unsigned long bitTotalTime[2];
-	bool preSyncStandalone : 1;
-	bool postSyncPresent : 1;
+	bool prePauseStandalone : 1;
+	bool postPausePresent : 1;
 	bool valid : 1;
 
 #ifdef TRACE_BITS

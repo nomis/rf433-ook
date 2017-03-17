@@ -36,7 +36,7 @@ public:
 protected:
 	static constexpr uint8_t MAX_LENGTH = 100;
 	static constexpr unsigned long MAX_BIT_US = 5000;
-	static constexpr unsigned long MAX_SYNC_US = 50000;
+	static constexpr unsigned long MAX_PAUSE_US = 50000;
 	static constexpr unsigned long MAX_REPEAT = 20;
 
 	void processLine(Stream &console);
@@ -49,9 +49,9 @@ protected:
 	bool valid = true;
 
 	int pin;
-	unsigned long preSyncTime = 10000;
-	unsigned long interSyncTime = 10000;
-	unsigned long postSyncTime = 10000;
+	unsigned long prePauseTime = 10000;
+	unsigned long interPauseTime = 10000;
+	unsigned long postPauseTime = 10000;
 	unsigned long bitTime[2] = { 275, 1130 };
 	unsigned int repeat = 5;
 } __attribute__((packed));
