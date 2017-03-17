@@ -177,6 +177,8 @@ void Transmitter::transmit(const Code &code) {
 
       togglePin(state, bitTime[bit]);
     }
+
+    state = LOW;
   }
 
   togglePin(state, postPauseTime);
