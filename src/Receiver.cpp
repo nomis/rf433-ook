@@ -172,7 +172,7 @@ retry:
 			data.bitTime[1] = 0;
 			code->bitTotalTime[0] = 0;
 			code->bitTotalTime[1] = 0;
-			data.start = last;
+			data.start = now;
 			code->prePauseTime = duration;
 			data.minPauseTime = duration * MIN_POST_PAUSE_DURATION / Receiver::DIVISOR;
 			data.maxPauseTime = duration * MAX_POST_PAUSE_DURATION / Receiver::DIVISOR;
@@ -323,7 +323,7 @@ retry:
 
 		// Check min length (but we can't receive the final bit)
 		if (code->messageLength >= Code::MIN_LENGTH - 1) {
-			code->duration = now - data.start;
+			code->duration = (last - data.start) + data.bitTime[1];
 			code->postPauseTime = duration;
 			code->prePauseStandalone = prePauseStandalone;
 			code->postPausePresent = postPausePresent;
