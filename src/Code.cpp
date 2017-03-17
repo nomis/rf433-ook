@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Decode logic for HomeEasyV1 derived from code by Tim Hawes (2014).
+ * Decode logic for HomeEasyV1A and HomeEasyV2A derived from code by Tim Hawes (2014).
  */
 
 #include "Code.hpp"
