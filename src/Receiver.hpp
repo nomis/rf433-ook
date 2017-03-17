@@ -65,7 +65,7 @@ protected:
 	static constexpr unsigned long MIN_BIT_US = 100;
 
 #ifdef TRACE_BITS
-	static constexpr unsigned int MAX_CODES = 4;
+	static constexpr unsigned int MAX_CODES = 2;
 #else
 	static constexpr unsigned int MAX_CODES = 16;
 #endif
