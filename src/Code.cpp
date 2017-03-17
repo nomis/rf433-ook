@@ -205,25 +205,63 @@ bool Code::finalise() {
 		preambleTime[1] = 0;
 	}
 
-	if (messageTrailingCount() == 3) {
-		// Guess the missing final bit based on the other 4-bit values in the message
-		const uint8_t trailingValue = messageTrailingValue();
-		const uint8_t finalBit = 0x80 >> (messageLength & 0x07);
-		bool values[1 << 4] = { false };
+	// Guess the missing final bit based on the other bit values in the message
+	const uint8_t trailingValue = messageTrailingValue();
+	uint8_t finalBit;
+	bool values1bit[1 << 1] = { false };
+	bool values2bit[1 << 2] = { false };
+	bool values3bit[1 << 3] = { false };
+	bool values4bit[1 << 4] = { false };
 
-		for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
-			values[messageValueAt(i)] = true;
-		}
-
-		if (values[(trailingValue << 1) | 1]) {
-			message[messageLength / 8] |= finalBit;
-		} else {
-			message[messageLength / 8] |= ~finalBit;
-		}
-
-		messageLength++;
-		bitTotalTime[finalBit] += bitTime[finalBit];
+	for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+		values1bit[messageValueAt(i) >> 3] = true;
+		values2bit[messageValueAt(i) >> 2] = true;
+		values3bit[messageValueAt(i) >> 1] = true;
+		values4bit[messageValueAt(i)] = true;
 	}
+
+	switch (messageTrailingCount()) {
+	case 3:
+		if (values4bit[(trailingValue << 1) | 1]) {
+			finalBit = 1;
+		} else {
+			finalBit = 0;
+		}
+		break;
+
+	case 2:
+		if (values3bit[(trailingValue << 1) | 1]) {
+			finalBit = 1;
+		} else {
+			finalBit = 0;
+		}
+		break;
+
+	case 1:
+		if (values2bit[(trailingValue << 1) | 1]) {
+			finalBit = 1;
+		} else {
+			finalBit = 0;
+		}
+		break;
+
+	case 0:
+		if (values1bit[(trailingValue << 1) | 1]) {
+			finalBit = 1;
+		} else {
+			finalBit = 0;
+		}
+		break;
+	}
+
+	const uint8_t value = 0x80 >> (messageLength & 0x07);
+	if (finalBit) {
+		message[messageLength / 8] |= value;
+	} else {
+		message[messageLength / 8] &= ~value;
+	}
+	messageLength++;
+	bitTotalTime[finalBit] += bitTime[finalBit];
 
 	return true;
 }
