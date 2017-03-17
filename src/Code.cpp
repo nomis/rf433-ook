@@ -141,9 +141,9 @@ bool Code::finalise() {
 
 	messageCountBits(zeroBitCount, oneBitCount);
 
-	if (zeroBitCount > 0 && oneBitCount > 0) {
-		bitTime[0] = bitTotalTime[0] / zeroBitCount;
-		bitTime[1] = bitTotalTime[1] / oneBitCount;
+	if (zeroBitCount > 0 || oneBitCount > 0) {
+		bitTime[0] = zeroBitCount > 0 ? (bitTotalTime[0] / zeroBitCount) : 0;
+		bitTime[1] = oneBitCount > 0 ? (bitTotalTime[1] / oneBitCount) : 0;
 
 		for (uint_fast8_t i = 0; i < 2; i++) {
 			if (preambleTime[i] < bitTime[0] * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR) {
