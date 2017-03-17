@@ -24,7 +24,7 @@
 
 
 Transmitter::Transmitter(int pin) {
-  this->pin = pin;
+	this->pin = pin;
 }
 
 Transmitter::~Transmitter() {
@@ -32,172 +32,172 @@ Transmitter::~Transmitter() {
 }
 
 void Transmitter::init() const {
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, LOW);
+	pinMode(pin, OUTPUT);
+	digitalWrite(pin, LOW);
 }
 
 void Transmitter::processInput(Stream &console) {
-  while (console.available()) {
-    int c = console.read();
-    if (c >= 0) {
-      switch (c) {
-      case '\r':
-      case '\n':
-        if (valid) {
-          buffer[length] = 0;
-          processLine(console);
-        }
-        buffer[0] = 0;
-        length = 0;
-        valid = true;
-        break;
+	while (console.available()) {
+		int c = console.read();
+		if (c >= 0) {
+			switch (c) {
+			case '\r':
+			case '\n':
+				if (valid) {
+					buffer[length] = 0;
+					processLine(console);
+				}
+				buffer[0] = 0;
+				length = 0;
+				valid = true;
+				break;
 
-      default:
-        if (length >= MAX_LENGTH) {
-          valid = false;
-        } else {
-          buffer[length++] = c;
-        }
-        break;
-      }
-    }
-  }
+			default:
+				if (length >= MAX_LENGTH) {
+					valid = false;
+				} else {
+					buffer[length++] = c;
+				}
+				break;
+			}
+		}
+	}
 }
 
 void Transmitter::processLine(Stream &console) {
-  bool configured = false;
+	bool configured = false;
 
-  for (char *parse = buffer, *saveptr = nullptr, *token;
-      (token = strtok_r(parse, ",", &saveptr)) != nullptr;
-      parse = nullptr) {
-    if (token[0] == '?') {
-      configured = true;
-    } else if (strlen(token) > 2 && token[1] == '=') {
-      char *endptr = nullptr;
-      unsigned long value = strtoul(&token[2], &endptr, 10);
+	for (char *parse = buffer, *saveptr = nullptr, *token;
+			(token = strtok_r(parse, ",", &saveptr)) != nullptr;
+			parse = nullptr) {
+		if (token[0] == '?') {
+			configured = true;
+		} else if (strlen(token) > 2 && token[1] == '=') {
+			char *endptr = nullptr;
+			unsigned long value = strtoul(&token[2], &endptr, 10);
 
-      if (strlen(endptr) > 0) {
-        continue;
-      }
+			if (strlen(endptr) > 0) {
+				continue;
+			}
 
-      switch (token[0]) {
-      case '0':
-      case '1':
-        if (value <= MAX_BIT_US) {
-          bitTime[token[0] - '0'] = value;
-          configured = true;
-        }
-        break;
+			switch (token[0]) {
+			case '0':
+			case '1':
+				if (value <= MAX_BIT_US) {
+					bitTime[token[0] - '0'] = value;
+					configured = true;
+				}
+				break;
 
-      case 'R':
-        if (value > 0 && value <= MAX_REPEAT) {
-          repeat = value;
-          configured = true;
-        }
-        break;
+			case 'R':
+				if (value > 0 && value <= MAX_REPEAT) {
+					repeat = value;
+					configured = true;
+				}
+				break;
 
-      case 'B': // before
-        if (value <= MAX_PAUSE_US) {
-          prePauseTime = value;
-          configured = true;
-        }
-        break;
+			case 'B': // before
+				if (value <= MAX_PAUSE_US) {
+					prePauseTime = value;
+					configured = true;
+				}
+				break;
 
-      case 'I': // inter
-        if (value <= MAX_PAUSE_US) {
-          interPauseTime = value;
-          configured = true;
-        }
-        break;
+			case 'I': // inter
+				if (value <= MAX_PAUSE_US) {
+					interPauseTime = value;
+					configured = true;
+				}
+				break;
 
-      case 'A': // after
-        if (value <= MAX_PAUSE_US) {
-          postPauseTime = value;
-          configured = true;
-        }
-        break;
-      }
-    } else {
-      Code code(token);
+			case 'A': // after
+				if (value <= MAX_PAUSE_US) {
+					postPauseTime = value;
+					configured = true;
+				}
+				break;
+			}
+		} else {
+			Code code(token);
 
-      if (configured) {
-        outputConfiguration(console);
-        configured = false;
-      }
+			if (configured) {
+				outputConfiguration(console);
+				configured = false;
+			}
 
-      if (code.isValid()) {
-        console.print("transmit: ");
-        console.println(code);
+			if (code.isValid()) {
+				console.print("transmit: ");
+				console.println(code);
 
-        transmit(code);
-      }
-    }
-  }
+				transmit(code);
+			}
+		}
+	}
 
-  if (configured) {
-    outputConfiguration(console);
-  }
+	if (configured) {
+		outputConfiguration(console);
+	}
 }
 
 void Transmitter::outputConfiguration(Stream &console) {
-  console.print("config: {");
-  console.print("prePauseTime: ");
-  console.print(prePauseTime);
-  console.print(",interPauseTime: ");
-  console.print(interPauseTime);
-  console.print(",postPauseTime: ");
-  console.print(postPauseTime);
-  console.print(",zeroBitDuration: ");
-  console.print(bitTime[0]);
-  console.print(",oneBitDuration: ");
-  console.print(bitTime[1]);
-  console.print(",repeat: ");
-  console.print(repeat);
-  console.println('}');
+	console.print("config: {");
+	console.print("prePauseTime: ");
+	console.print(prePauseTime);
+	console.print(",interPauseTime: ");
+	console.print(interPauseTime);
+	console.print(",postPauseTime: ");
+	console.print(postPauseTime);
+	console.print(",zeroBitDuration: ");
+	console.print(bitTime[0]);
+	console.print(",oneBitDuration: ");
+	console.print(bitTime[1]);
+	console.print(",repeat: ");
+	console.print(repeat);
+	console.println('}');
 }
 
 void Transmitter::transmit(const Code &code) {
-  uint8_t state = LOW;
+	uint8_t state = LOW;
 
-  digitalWrite(pin, LOW);
-  togglePin(state, prePauseTime);
+	digitalWrite(pin, LOW);
+	togglePin(state, prePauseTime);
 
-  for (uint_fast8_t n = 0; n < repeat; n++) {
-    if (n > 0) {
-      togglePin(state, interPauseTime);
-    }
+	for (uint_fast8_t n = 0; n < repeat; n++) {
+		if (n > 0) {
+			togglePin(state, interPauseTime);
+		}
 
-    if (code.preambleTime[0] || code.preambleTime[1]) {
-      togglePin(state, code.preambleTime[0]);
-      togglePin(state, code.preambleTime[1]);
-    }
+		if (code.preambleTime[0] || code.preambleTime[1]) {
+			togglePin(state, code.preambleTime[0]);
+			togglePin(state, code.preambleTime[1]);
+		}
 
-    for (uint_fast8_t i = 0; i < code.messageLength; i++) {
-      uint8_t bit = code.message[i / 8] & (0x80 >> (i & 0x7)) ? 1 : 0;
+		for (uint_fast8_t i = 0; i < code.messageLength; i++) {
+			uint8_t bit = code.message[i / 8] & (0x80 >> (i & 0x7)) ? 1 : 0;
 
-      togglePin(state, bitTime[bit]);
-    }
+			togglePin(state, bitTime[bit]);
+		}
 
-    state = LOW;
-  }
+		state = LOW;
+	}
 
-  togglePin(state, postPauseTime);
-  digitalWrite(pin, LOW);
+	togglePin(state, postPauseTime);
+	digitalWrite(pin, LOW);
 }
 
 inline void Transmitter::togglePin(uint8_t &state, unsigned long duration) {
-  unsigned long start;
+	unsigned long start;
 
-  noInterrupts();
-  start = micros();
-  digitalWrite(pin, state);
-  interrupts();
+	noInterrupts();
+	start = micros();
+	digitalWrite(pin, state);
+	interrupts();
 
-  if (duration) {
-    while (micros() - start < duration) {
-      // Delay
-    }
-  }
+	if (duration) {
+		while (micros() - start < duration) {
+			// Delay
+		}
+	}
 
-  state = (state == LOW) ? HIGH : LOW;
+	state = (state == LOW) ? HIGH : LOW;
 }
