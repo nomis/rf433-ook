@@ -187,8 +187,8 @@ inline void Transmitter::togglePin(uint8_t &state, unsigned long duration) {
   unsigned long start;
 
   noInterrupts();
-  digitalWrite(pin, state);
   start = micros();
+  digitalWrite(pin, state);
   interrupts();
 
   if (duration) {
