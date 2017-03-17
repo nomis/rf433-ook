@@ -126,8 +126,8 @@ inline void Receiver::addBit(Code *code, uint8_t bit, const unsigned long &durat
 	}
 
 #ifdef TRACE_BITS
-	if ((duration >> 3) <= 255) {
-		code->traceBitTimes[code->messageLength] = duration >> 3;
+	if ((duration >> 4) < 255) {
+		code->traceBitTimes[code->messageLength] = (duration >> 4);
 	} else {
 		code->traceBitTimes[code->messageLength] = 255;
 	}
@@ -417,7 +417,7 @@ void Receiver::printCode(Stream &output) {
 			output.print("# ");
 			output.print(i);
 			output.print('\t');
-			output.print((unsigned long)code.traceBitTimes[i] << 3);
+			output.print((unsigned long)code.traceBitTimes[i] << 4);
 			output.print('\t');
 			output.print(code.message[i / 8] >> (7 - (i & 0x07)) & 1);
 			output.println();
