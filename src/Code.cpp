@@ -168,6 +168,9 @@ bool Code::finalise() {
 				// Invalid timing of non-preamble bits
 				return false;
 			}
+		} else if ((preambleType[0] == PreambleType::ZERO || preambleType[0] == PreambleType::ONE)
+				&& (preambleType[1] == PreambleType::ZERO || preambleType[1] == PreambleType::ONE)) {
+			hasPreamble = false;
 		} else {
 			// Invalid timing of bits
 			return false;
