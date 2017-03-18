@@ -192,20 +192,30 @@ retry:
 	} else {
 		bool postPausePresent = false;
 
-		// Check max length (but we can't receive the final bit)
-		if (code->messageLength == Code::MAX_LENGTH - 1) {
-			// Code too long
+		if (duration < MIN_BIT_US) {
+			// Too short
+			goto error;
 		} else if (code->preambleTime[0] == 0) {
+			if (duration > MAX_BIT_US) {
+				// Too long
+				goto error;
+			}
 			code->preambleTime[0] = duration;
 			goto done;
 		} else if (code->preambleTime[1] == 0) {
+			if (duration > MAX_BIT_US) {
+				// Too long
+				goto error;
+			}
 			code->preambleTime[1] = duration;
 			goto done;
+		} else if (code->messageLength == Code::MAX_LENGTH - 1) { // We can't receive the final bit
+			// Code too long
 		} else if (!data.sampleComplete) {
-			if (duration < MIN_BIT_US) {
-				// Too short
+			if (duration > MAX_BIT_US) {
+				// Too long
 				goto error;
-			} else {
+				} else {
 				bool bit;
 
 				if (data.bitTime[0] == 0) {
@@ -213,9 +223,9 @@ retry:
 					data.bitTime[0] = duration;
 
 					bit = 0;
-#ifdef DEBUG_TIMING
+	#ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_ZERO;
-#endif
+	#endif
 				} else if (duration >= data.bitTime[0] * Receiver::MIN_RELATIVE_DURATION / Receiver::DIVISOR) {
 					if (data.bitTime[1] == 0) {
 						// This bit looks like a 1-bit relative to the duration of the
@@ -228,9 +238,9 @@ retry:
 					}
 
 					bit = 1;
-#ifdef DEBUG_TIMING
+	#ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_ONE;
-#endif
+	#endif
 				} else if (data.bitTime[0] >= duration * Receiver::MIN_RELATIVE_DURATION / Receiver::DIVISOR) {
 					// If the currently known 0-bit looks like a 1-bit relative to
 					// this bit then the previous bits were 1-bits and this is now
@@ -248,18 +258,18 @@ retry:
 					}
 
 					bit = 0;
-#ifdef DEBUG_TIMING
+	#ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_SWAP;
-#endif
+	#endif
 				} else {
 					// This looks like another 0-bit, average it into the timing
 					data.bitTime[0] += duration;
 					data.bitTime[0] /= 2;
 
 					bit = 0;
-#ifdef DEBUG_TIMING
+	#ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_ZERO;
-#endif
+	#endif
 				}
 
 				addBit(code, bit, duration);
@@ -280,9 +290,9 @@ retry:
 						goto error;
 					}
 
-#ifdef DEBUG_TIMING
+	#ifdef DEBUG_TIMING
 					timingType = TIMING_SAMPLE_COMPLETE;
-#endif
+	#endif
 
 					data.sampleComplete = true;
 				} else if (code->messageLength >= Receiver::MAX_SAMPLES) {

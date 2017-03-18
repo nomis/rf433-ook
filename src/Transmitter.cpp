@@ -24,7 +24,7 @@
 
 const Transmitter::Preset Transmitter::PRESETS[] = {
 	{ 8800, { 0, 0 }, { 292, 980 }, 5 }, //< HomeEasyV1A
-	{ 8912, { 172, 2568 } , { 220, 1304 }, 5 }, //< HomeEasyV2A
+	{ 8912, { 172, 2582 } , { 220, 1304 }, 5 }, //< HomeEasyV2A
 };
 
 Transmitter::Transmitter(int pin) {

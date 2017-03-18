@@ -37,10 +37,10 @@ public:
 	static constexpr unsigned long DIVISOR = 1 << 3;
 
 	// Relative duration compared to sampled bit periods
-	static constexpr unsigned long MIN_ZERO_DURATION = 6;
-	static constexpr unsigned long MAX_ZERO_DURATION = 10;
-	static constexpr unsigned long MIN_ONE_DURATION = 6;
-	static constexpr unsigned long MAX_ONE_DURATION = 10;
+	static constexpr unsigned long MIN_ZERO_DURATION = 4;
+	static constexpr unsigned long MAX_ZERO_DURATION = 12;
+	static constexpr unsigned long MIN_ONE_DURATION = 4;
+	static constexpr unsigned long MAX_ONE_DURATION = 12;
 
 	// Relative duration of the 1-bit compared to the 0-bit for a preabmle
 	static constexpr unsigned long PREAMBLE_RELATIVE_DURATION = 64;
@@ -61,8 +61,9 @@ protected:
 	// Minimum time for an initial pause or processing will be ignored
 	static constexpr unsigned long MIN_PAUSE_US = 4000;
 
-	// Minimum time for a bit or processing will abort
+	// Minimum/maximum time for a bit or processing will abort
 	static constexpr unsigned long MIN_BIT_US = 100;
+	static constexpr unsigned long MAX_BIT_US = 5000;
 
 #ifdef TRACE_BITS
 	static constexpr unsigned int MAX_CODES = 2;

@@ -31,8 +31,6 @@ public:
 	void init() const;
 	void processInput(Stream *console);
 
-	static constexpr unsigned long MAX_PREAMBLE_US = 10000;
-
 protected:
 	struct Preset {
 		unsigned int pauseTime;
@@ -42,6 +40,7 @@ protected:
 	};
 
 	static constexpr uint8_t MAX_LENGTH = 100;
+	static constexpr unsigned long MAX_PREAMBLE_US = 10000;
 	static constexpr unsigned long MAX_BIT_US = 5000;
 	static constexpr unsigned long MAX_PAUSE_US = 50000;
 	static constexpr unsigned long MAX_REPEAT = 20;

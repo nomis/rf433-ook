@@ -131,6 +131,17 @@ bool Code::finalise() {
 			}
 		}
 
+#if 0
+		SerialUSB.print("# Preamble: ");
+		SerialUSB.print(preambleTime[0]);
+		SerialUSB.print('=');
+		SerialUSB.print((int)preambleType[0]);
+		SerialUSB.print(',');
+		SerialUSB.print(preambleTime[1]);
+		SerialUSB.print('=');
+		SerialUSB.println((int)preambleType[1]);
+#endif
+
 		if (preambleType[0] == PreambleType::ZERO && preambleType[1] >= PreambleType::ONE) {
 			if (preambleTime[1] > preambleTime[0] * Receiver::PREAMBLE_RELATIVE_DURATION / Receiver::DIVISOR) {
 				hasPreamble = true;
