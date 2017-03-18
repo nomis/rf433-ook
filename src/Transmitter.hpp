@@ -34,15 +34,24 @@ public:
 	static constexpr unsigned long MAX_PREAMBLE_US = 10000;
 
 protected:
+	struct Preset {
+		unsigned long pauseTime;
+		unsigned long bitTime[2];
+		unsigned int repeat;
+	};
+
 	static constexpr uint8_t MAX_LENGTH = 100;
 	static constexpr unsigned long MAX_BIT_US = 5000;
 	static constexpr unsigned long MAX_PAUSE_US = 50000;
 	static constexpr unsigned long MAX_REPEAT = 20;
 
+	static const Preset PRESETS[];
+
 	void processLine(Stream &console);
 	void outputConfiguration(Stream &console);
 	void transmit(const Code &code);
-	void togglePin(uint8_t &state, unsigned long duration);
+	void togglePin(unsigned long duration);
+	void pausePin(unsigned long duration);
 
 	char buffer[MAX_LENGTH + 1] = { 0 };
 	uint8_t length = 0;
@@ -52,8 +61,12 @@ protected:
 	unsigned long prePauseTime = 10000;
 	unsigned long interPauseTime = 10000;
 	unsigned long postPauseTime = 10000;
-	unsigned long bitTime[2] = { 275, 1130 };
+	unsigned long bitTime[2] = { 300, 900 };
 	unsigned int repeat = 5;
+
+private:
+	uint8_t state;
+	unsigned long start;
 } __attribute__((packed));
 
 #endif

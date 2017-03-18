@@ -22,6 +22,9 @@
 
 #include "Transmitter.hpp"
 
+const Transmitter::Preset Transmitter::PRESETS[] = {
+	{ 8800, { 290, 980 }, 5 }, //< HomeEasyV1A
+};
 
 Transmitter::Transmitter(int pin) {
 	this->pin = pin;
@@ -116,6 +119,16 @@ void Transmitter::processLine(Stream &console) {
 					configured = true;
 				}
 				break;
+
+			case 'P': // preset
+				if (value < sizeof(PRESETS) / sizeof(PRESETS[0])) {
+					prePauseTime = interPauseTime = postPauseTime = PRESETS[value].pauseTime;
+					bitTime[0] = PRESETS[value].bitTime[0];
+					bitTime[1] = PRESETS[value].bitTime[1];
+					repeat = PRESETS[value].repeat;
+					configured = true;
+				}
+				break;
 			}
 		} else {
 			Code code(token);
@@ -157,37 +170,32 @@ void Transmitter::outputConfiguration(Stream &console) {
 }
 
 void Transmitter::transmit(const Code &code) {
-	uint8_t state = LOW;
+	state = LOW;
+	start = micros();
 
-	digitalWrite(pin, LOW);
-	togglePin(state, prePauseTime);
+	pausePin(prePauseTime);
 
 	for (uint_fast8_t n = 0; n < repeat; n++) {
 		if (n > 0) {
-			togglePin(state, interPauseTime);
+			pausePin(interPauseTime);
 		}
 
 		if (code.preambleTime[0] || code.preambleTime[1]) {
-			togglePin(state, code.preambleTime[0]);
-			togglePin(state, code.preambleTime[1]);
+			togglePin(code.preambleTime[0]);
+			togglePin(code.preambleTime[1]);
 		}
 
 		for (uint_fast8_t i = 0; i < code.messageLength; i++) {
 			uint8_t bit = code.message[i / 8] & (0x80 >> (i & 0x7)) ? 1 : 0;
 
-			togglePin(state, bitTime[bit]);
+			togglePin(bitTime[bit]);
 		}
-
-		state = LOW;
 	}
 
-	togglePin(state, postPauseTime);
-	digitalWrite(pin, LOW);
+	pausePin(postPauseTime);
 }
 
-inline void Transmitter::togglePin(uint8_t &state, unsigned long duration) {
-	unsigned long start;
-
+inline void Transmitter::togglePin(unsigned long duration) {
 	noInterrupts();
 	start = micros();
 	digitalWrite(pin, state);
@@ -200,4 +208,19 @@ inline void Transmitter::togglePin(uint8_t &state, unsigned long duration) {
 	}
 
 	state = (state == LOW) ? HIGH : LOW;
+	start += duration;
+}
+
+inline void Transmitter::pausePin(unsigned long duration) {
+	// start has already been set
+	digitalWrite(pin, LOW);
+
+	if (duration) {
+		while (micros() - start < duration) {
+			// Delay
+		}
+	}
+
+	state = HIGH;
+	start += duration;
 }
