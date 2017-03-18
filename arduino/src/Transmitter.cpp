@@ -23,8 +23,10 @@
 #include "Transmitter.hpp"
 
 const Transmitter::Preset Transmitter::PRESETS[] = {
-	{ 8800, { 0, 0 }, { 292, 980 }, 5 }, //< HomeEasyV1A
-	{ 8912, { 172, 2582 } , { 220, 1304 }, 5 }, //< HomeEasyV2A
+	{ /*  4932 */ 3960, {             0,               0 }, { /* 312 */ 308, /*  968 */  956 }, 5 }, //< HomeEasyV0
+	{ /* 10736 */ 8800, {             0,               0 }, { /* 296 */ 292, /*  984 */  980 }, 5 }, //< HomeEasyV1
+	{ /*  9768 */ 9828, {             0,               0 }, { /* 250 */ 244, /* 1374 */ 1372 }, 5 }, //< HomeEasyV2
+	{ /* 10212 */ 8912, { /* 216 */ 172, /* 2560 */ 2582 }, { /* 240 */ 220, /* 1300 */ 1304 }, 5 }, //< HomeEasyV3
 };
 
 Transmitter::Transmitter(int pin) {

@@ -52,8 +52,9 @@ protected:
 	void messageAsString(String &code, char &packedTrailingBits) const;
 	void messageCountBits(unsigned int &zeroBitCount, unsigned int &oneBitCount) const;
 
-	size_t printHomeEasyV1A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
-	size_t printHomeEasyV2A(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
+	size_t printHomeEasyV1(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
+	size_t printHomeEasyV2(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
+	size_t printHomeEasyV3(bool &first, const String &code, Print &p) const __attribute__((warn_unused_result));
 
 	unsigned long duration;
 	unsigned long prePauseTime;

@@ -16,10 +16,10 @@ def encode(group=None, device=None, action=None, level=None):
 		1 if device is None else device % 16)
 	if level is not None:
 		code += "{:04b}".format(int(level // 6.6) % 16)
-	return "S=1," + __encode(code)
+	return "S=3," + __encode(code)
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description="HomeEasyV2A message encoder")
+	parser = argparse.ArgumentParser(description="HomeEasyV3 message encoder")
 	parser.add_argument("-s", "--server", metavar="FILENAME", type=str, help="server socket to send command to")
 	parser.add_argument("-p", "--port", metavar="PORT", type=str, help="serial port to send command to")
 	parser.add_argument("-b", "--baud-rate", metavar="BPS", type=int, default=115200, help="serial port baud rate")

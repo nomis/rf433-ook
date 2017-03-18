@@ -15,7 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Decode logic for HomeEasyV1A and HomeEasyV2A derived from code by Tim Hawes (2014).
+ * Decode logic for HomeEasyV1 and HomeEasyV3 derived from code by Tim Hawes (2014).
+ * Decode logic for HomeEasyV2 derived from code by Markus 'Xento' M. (2014).
  */
 
 #include "Code.hpp"
@@ -379,8 +380,9 @@ size_t Code::printTo(Print &p) const {
 
 	if (postPausePresent) {
 		n += p.print(",decode: {");
-		n += printHomeEasyV1A(first, code, p);
-		n += printHomeEasyV2A(first, code, p);
+		n += printHomeEasyV1(first, code, p);
+		n += printHomeEasyV2(first, code, p);
+		n += printHomeEasyV3(first, code, p);
 		n += p.print('}');
 	}
 
@@ -394,7 +396,7 @@ size_t Code::printTo(Print &p) const {
 	return n;
 }
 
-size_t Code::printHomeEasyV1A(bool &first, const String &code, Print &p) const {
+size_t Code::printHomeEasyV1(bool &first, const String &code, Print &p) const {
 	size_t n = 0;
 	String decoded;
 	int8_t group = -1;
@@ -457,7 +459,7 @@ size_t Code::printHomeEasyV1A(bool &first, const String &code, Print &p) const {
 		n += p.print(',');
 	}
 
-	n += p.print("HomeEasyV1A: {code: \"");
+	n += p.print("HomeEasyV1: {code: \"");
 	n += p.print(decoded);
 	n += p.print('\"');
 	if (group >= 0) {
@@ -479,7 +481,94 @@ out:
 	return n;
 }
 
-size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
+size_t Code::printHomeEasyV2(bool &first, const String &code, Print &p) const {
+	size_t n = 0;
+	String decoded;
+	uint32_t group = 0;
+	uint8_t device = 0;
+	String action = "";
+
+	if (code.length() != 29) {
+		goto out;
+	}
+
+	for (const char c : code) {
+		switch (c) {
+		case '0':
+			decoded += "00";
+			break;
+
+		case '1':
+			decoded += "01";
+			break;
+
+		case '4':
+			decoded += "10";
+			break;
+
+		case '5':
+			decoded += "11";
+			break;
+
+		default:
+			goto out;
+		}
+	}
+
+	// Ignore the last bit
+	decoded.remove(decoded.length() - 1);
+
+	if (decoded.substring(0, 11) != "11000111100") {
+		goto out;
+	}
+
+	for (uint_fast8_t i = 0; i <= 31; i++) {
+		group |= (uint32_t)(uint8_t)(decoded[11 + (31 - i)] - '0') << i;
+	}
+
+	if (decoded.substring(43, 47) == "1011" && decoded.substring(49, 51) == "01") {
+		if (decoded.substring(47, 49) == "01") {
+			action = "off";
+		} else if (decoded.substring(47, 49) == "10") {
+			action = "on";
+		}
+	} else if (decoded.substring(43, 47) == "1100" && decoded.substring(49, 51) == "11") {
+		if (decoded.substring(47, 49) == "01") {
+			action = "group off";
+		} else if (decoded.substring(47, 49) == "10") {
+			action = "group on";
+		}
+	}
+
+	for (uint_fast8_t i = 0; i <= 6; i++) {
+		device |= (uint32_t)(uint8_t)(decoded[51 + (6 - i)] - '0') << i;
+	}
+
+	if (first) {
+		first = false;
+	} else {
+		n += p.print(',');
+	}
+
+	n += p.print("HomeEasyV2: {code: \"");
+	n += p.print(decoded);
+	n += p.print('\"');
+	n += p.print(",group: ");
+	n += p.print(group);
+	n += p.print(",device: ");
+	n += p.print(device);
+	if (action != "") {
+		n += p.print(",action: \"");
+		n += p.print(action);
+		n += p.print('\"');
+	}
+	n += p.print('}');
+
+out:
+	return n;
+}
+
+size_t Code::printHomeEasyV3(bool &first, const String &code, Print &p) const {
 	size_t n = 0;
 	String decoded;
 	int32_t group = -1;
@@ -565,7 +654,7 @@ size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 		n += p.print(',');
 	}
 
-	n += p.print("HomeEasyV2A: {code: \"");
+	n += p.print("HomeEasyV3: {code: \"");
 	n += p.print(decoded);
 	n += p.print('\"');
 	if (group != -1) {
