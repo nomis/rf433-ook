@@ -482,7 +482,7 @@ out:
 size_t Code::printHomeEasyV2A(bool &first, const String &code, Print &p) const {
 	size_t n = 0;
 	String decoded;
-	int32_t group = 0;
+	int32_t group = -1;
 	int8_t device = -1;
 	int8_t dimLevel = -1;
 	String action;
