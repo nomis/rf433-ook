@@ -140,8 +140,14 @@ bool Code::finalise() {
 				// Invalid timing of non-preamble bits
 				return false;
 			}
-		} else if ((preambleType[0] == PreambleType::ZERO || preambleType[0] == PreambleType::ONE)
-				&& (preambleType[1] == PreambleType::ZERO || preambleType[1] == PreambleType::ONE)) {
+		} else if (preambleType[0] != PreambleType::MEDIUM && preambleType[1] != PreambleType::MEDIUM) {
+			for (uint_fast8_t i = 0; i < 2; i++) {
+				if (preambleType[i] == PreambleType::SHORT) {
+					preambleType[i] = PreambleType::ZERO;
+				} else if (preambleType[i] == PreambleType::LONG) {
+					preambleType[i] = PreambleType::ONE;
+				}
+			}
 			hasPreamble = false;
 		} else {
 			// Invalid timing of bits
