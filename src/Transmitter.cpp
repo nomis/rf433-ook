@@ -39,9 +39,9 @@ void Transmitter::init() const {
 	digitalWrite(pin, LOW);
 }
 
-void Transmitter::processInput(Stream &console) {
-	while (console.available()) {
-		int c = console.read();
+void Transmitter::processInput(Stream *console) {
+	while (console->available()) {
+		int c = console->read();
 		if (c >= 0) {
 			switch (c) {
 			case '\r':
@@ -67,7 +67,7 @@ void Transmitter::processInput(Stream &console) {
 	}
 }
 
-void Transmitter::processLine(Stream &console) {
+void Transmitter::processLine(Print *output) {
 	bool configured = false;
 
 	for (char *parse = buffer, *saveptr = nullptr, *token;
@@ -134,13 +134,13 @@ void Transmitter::processLine(Stream &console) {
 			Code code(token);
 
 			if (configured) {
-				outputConfiguration(console);
+				outputConfiguration(output);
 				configured = false;
 			}
 
 			if (code.isValid()) {
-				console.print("transmit: ");
-				console.println(code);
+				output->print("transmit: ");
+				output->println(code);
 
 				transmit(code);
 			}
@@ -148,25 +148,25 @@ void Transmitter::processLine(Stream &console) {
 	}
 
 	if (configured) {
-		outputConfiguration(console);
+		outputConfiguration(output);
 	}
 }
 
-void Transmitter::outputConfiguration(Stream &console) {
-	console.print("config: {");
-	console.print("prePauseTime: ");
-	console.print(prePauseTime);
-	console.print(",interPauseTime: ");
-	console.print(interPauseTime);
-	console.print(",postPauseTime: ");
-	console.print(postPauseTime);
-	console.print(",zeroBitDuration: ");
-	console.print(bitTime[0]);
-	console.print(",oneBitDuration: ");
-	console.print(bitTime[1]);
-	console.print(",repeat: ");
-	console.print(repeat);
-	console.println('}');
+void Transmitter::outputConfiguration(Print *output) {
+	output->print("config: {");
+	output->print("prePauseTime: ");
+	output->print(prePauseTime);
+	output->print(",interPauseTime: ");
+	output->print(interPauseTime);
+	output->print(",postPauseTime: ");
+	output->print(postPauseTime);
+	output->print(",zeroBitDuration: ");
+	output->print(bitTime[0]);
+	output->print(",oneBitDuration: ");
+	output->print(bitTime[1]);
+	output->print(",repeat: ");
+	output->print(repeat);
+	output->println('}');
 }
 
 void Transmitter::transmit(const Code &code) {

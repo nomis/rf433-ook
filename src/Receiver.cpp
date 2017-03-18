@@ -374,7 +374,7 @@ void Receiver::addCode() {
 	}
 }
 
-void Receiver::printCode(Stream &output) {
+void Receiver::printCode(Print *output) {
 	noInterrupts();
 #ifdef DEBUG_TIMING
 	unsigned long timeRead = micros();
@@ -401,88 +401,88 @@ void Receiver::printCode(Stream &output) {
 		interrupts();
 
 #ifdef TRACE_BITS
-		output.print("# -2\t");
-		output.println(code.preambleTime[0]);
-		output.print("# -1\t");
-		output.println(code.preambleTime[1]);
+		output->print("# -2\t");
+		output->println(code.preambleTime[0]);
+		output->print("# -1\t");
+		output->println(code.preambleTime[1]);
 
 		for (uint_fast8_t i = 0; i < code.messageLength; i++) {
-			output.print("# ");
-			output.print(i);
-			output.print('\t');
-			output.print((unsigned long)code.traceBitTimes[i] << 4);
-			output.print('\t');
-			output.print(code.message[i / 8] >> (7 - (i & 0x07)) & 1);
-			output.println();
+			output->print("# ");
+			output->print(i);
+			output->print('\t');
+			output->print((unsigned long)code.traceBitTimes[i] << 4);
+			output->print('\t');
+			output->print(code.message[i / 8] >> (7 - (i & 0x07)) & 1);
+			output->println();
 		}
 #endif
 
 		if (code.finalise()) {
-			output.print("receive: ");
-			output.println(code);
+			output->print("receive: ");
+			output->println(code);
 		}
 
 #ifdef DEBUG_TIMING
-		output.print("timing: {read: ");
-		output.print(timeRead);
+		output->print("timing: {read: ");
+		output->print(timeRead);
 
 		if (copyHandlerTimesMax[TIMING_PAUSE_STANDALONE] != 0) {
-			output.print(",pauseStandalone: [");
-			output.print(copyHandlerTimesMin[TIMING_PAUSE_STANDALONE]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_PAUSE_STANDALONE]);
-			output.print(']');
+			output->print(",pauseStandalone: [");
+			output->print(copyHandlerTimesMin[TIMING_PAUSE_STANDALONE]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_PAUSE_STANDALONE]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_PAUSE_FOLLOWING] != 0) {
-			output.print(",pauseFollowing: [");
-			output.print(copyHandlerTimesMin[TIMING_PAUSE_FOLLOWING]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_PAUSE_FOLLOWING]);
-			output.print(']');
+			output->print(",pauseFollowing: [");
+			output->print(copyHandlerTimesMin[TIMING_PAUSE_FOLLOWING]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_PAUSE_FOLLOWING]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_HANDLER_ZERO] != 0) {
-			output.print(",zeroBit: [");
-			output.print(copyHandlerTimesMin[TIMING_HANDLER_ZERO]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_HANDLER_ZERO]);
-			output.print(']');
+			output->print(",zeroBit: [");
+			output->print(copyHandlerTimesMin[TIMING_HANDLER_ZERO]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_HANDLER_ZERO]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_HANDLER_ONE] != 0) {
-			output.print(",oneBit: [");
-			output.print(copyHandlerTimesMin[TIMING_HANDLER_ONE]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_HANDLER_ONE]);
-			output.print(']');
+			output->print(",oneBit: [");
+			output->print(copyHandlerTimesMin[TIMING_HANDLER_ONE]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_HANDLER_ONE]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_ZERO] != 0) {
-			output.print(",sampleZero: [");
-			output.print(copyHandlerTimesMin[TIMING_SAMPLE_ZERO]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_SAMPLE_ZERO]);
-			output.print(']');
+			output->print(",sampleZero: [");
+			output->print(copyHandlerTimesMin[TIMING_SAMPLE_ZERO]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_SAMPLE_ZERO]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_ONE] != 0) {
-			output.print(",sampleOne: [");
-			output.print(copyHandlerTimesMin[TIMING_SAMPLE_ONE]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_SAMPLE_ONE]);
-			output.print(']');
+			output->print(",sampleOne: [");
+			output->print(copyHandlerTimesMin[TIMING_SAMPLE_ONE]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_SAMPLE_ONE]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE] != 0) {
-			output.print(",sampleComplete: [");
-			output.print(copyHandlerTimesMin[TIMING_SAMPLE_COMPLETE]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE]);
-			output.print(']');
+			output->print(",sampleComplete: [");
+			output->print(copyHandlerTimesMin[TIMING_SAMPLE_COMPLETE]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_SAMPLE_COMPLETE]);
+			output->print(']');
 		}
 		if (copyHandlerTimesMax[TIMING_OTHER] != 0) {
-			output.print(",other: [");
-			output.print(copyHandlerTimesMin[TIMING_OTHER]);
-			output.print(',');
-			output.print(copyHandlerTimesMax[TIMING_OTHER]);
-			output.print(']');
+			output->print(",other: [");
+			output->print(copyHandlerTimesMin[TIMING_OTHER]);
+			output->print(',');
+			output->print(copyHandlerTimesMax[TIMING_OTHER]);
+			output->print(']');
 		}
-		output.println("}");
+		output->println("}");
 #endif
 
 		return;

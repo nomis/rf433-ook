@@ -22,7 +22,7 @@
 #include <Arduino.h>
 
 // Input/output
-constexpr auto &console = SerialUSB;
+constexpr auto *console = &SerialUSB;
 constexpr unsigned long CONSOLE_BAUD_RATE = 115200;
 
 // 433MHz OOK

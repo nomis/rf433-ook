@@ -29,7 +29,7 @@ public:
 	Receiver();
 	virtual ~Receiver();
 	void attach(int pin);
-	void printCode(Stream &output);
+	void printCode(Print *output);
 
 	// All durations are specified as the numerator of a fractional number
 	// with the following denominator (divisor), which must be a power of 2

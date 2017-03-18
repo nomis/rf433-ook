@@ -54,11 +54,11 @@ void setup() {
 		transmitter.init();
 	}
 
-	console.begin(CONSOLE_BAUD_RATE);
+	console->begin(CONSOLE_BAUD_RATE);
 }
 
 void loop() {
-	if (console) {
+	if (*console) {
 		checkFreeMemory();
 
 		if (RX_ENABLED) {

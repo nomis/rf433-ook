@@ -29,7 +29,7 @@ public:
 	Transmitter(int pin);
 	virtual ~Transmitter();
 	void init() const;
-	void processInput(Stream &console);
+	void processInput(Stream *console);
 
 	static constexpr unsigned long MAX_PREAMBLE_US = 10000;
 
@@ -47,8 +47,8 @@ protected:
 
 	static const Preset PRESETS[];
 
-	void processLine(Stream &console);
-	void outputConfiguration(Stream &console);
+	void processLine(Print *output);
+	void outputConfiguration(Print *output);
 	void transmit(const Code &code);
 	void togglePin(unsigned long duration);
 	void pausePin(unsigned long duration);
