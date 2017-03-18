@@ -70,9 +70,9 @@ void loop() {
 				receiver.printCode(console);
 			}
 		}
+	}
 
-		if (TX_ENABLED) {
-			transmitter.processInput(console);
-		}
+	if (TX_ENABLED) {
+		transmitter.processInput(console);
 	}
 }
