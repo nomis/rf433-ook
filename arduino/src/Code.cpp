@@ -22,6 +22,7 @@
 #include "Code.hpp"
 #include "Receiver.hpp"
 #include "Transmitter.hpp"
+#include "Main.hpp"
 
 Code::Code() {
 	valid = false;
@@ -133,14 +134,14 @@ bool Code::finalise() {
 		}
 
 #if 0
-		SerialUSB.print("# Preamble: ");
-		SerialUSB.print(preambleTime[0]);
-		SerialUSB.print('=');
-		SerialUSB.print((int)preambleType[0]);
-		SerialUSB.print(',');
-		SerialUSB.print(preambleTime[1]);
-		SerialUSB.print('=');
-		SerialUSB.println((int)preambleType[1]);
+		console->print("# Preamble: ");
+		console->print(preambleTime[0]);
+		console->print('=');
+		console->print((int)preambleType[0]);
+		console->print(',');
+		console->print(preambleTime[1]);
+		console->print('=');
+		console->println((int)preambleType[1]);
 #endif
 
 		if (preambleType[0] == PreambleType::ZERO && preambleType[1] >= PreambleType::ONE) {

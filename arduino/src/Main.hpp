@@ -22,7 +22,11 @@
 #include <Arduino.h>
 
 // Input/output
+#ifdef ARDUINO_AVR_MICRO
 constexpr auto *console = &SerialUSB;
+#else
+constexpr auto *console = &Serial;
+#endif
 constexpr unsigned long CONSOLE_BAUD_RATE = 115200;
 
 // 433MHz OOK

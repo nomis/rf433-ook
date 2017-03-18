@@ -33,12 +33,12 @@ static void checkFreeMemory() {
 	int currentFreeMemory = freeMemory();
 
 	if (currentFreeMemory < lowMemoryWatermark) {
-		SerialUSB.print("# Free memory: ");
+		console->print("# Free memory: ");
 		if (lowMemoryWatermark != INT_MAX) {
-			SerialUSB.print(lowMemoryWatermark);
-			SerialUSB.print(" -> ");
+			console->print(lowMemoryWatermark);
+			console->print(" -> ");
 		}
-		SerialUSB.println(currentFreeMemory);
+		console->println(currentFreeMemory);
 		lowMemoryWatermark = currentFreeMemory;
 	}
 }
