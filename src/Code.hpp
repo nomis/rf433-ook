@@ -30,7 +30,7 @@ class Code: public Printable {
 
 public:
 	Code();
-	Code(char *message);
+	Code(const char *message);
 	virtual ~Code();
 	virtual size_t printTo(Print &p) const __attribute__((warn_unused_result));
 	bool isValid() const;
@@ -39,7 +39,6 @@ public:
 	static constexpr uint8_t MIN_LENGTH = 12 * 4 - 2;
 	static constexpr uint8_t MAX_LENGTH = 48 * 4 - 2;
 
-	unsigned long preambleTime[2];
 	uint8_t message[(MAX_LENGTH + 7 + 2) / 8]; // Add 2 bits extra space for the preamble bits during finalisation
 	uint8_t messageLength;
 
@@ -59,6 +58,7 @@ protected:
 	unsigned long duration;
 	unsigned long prePauseTime;
 	unsigned long postPauseTime;
+	unsigned long preambleTime[2];
 	unsigned long bitTotalTime[2];
 	bool prePauseStandalone : 1;
 	bool postPausePresent : 1;

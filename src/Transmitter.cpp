@@ -23,7 +23,8 @@
 #include "Transmitter.hpp"
 
 const Transmitter::Preset Transmitter::PRESETS[] = {
-	{ 8800, { 290, 980 }, 5 }, //< HomeEasyV1A
+	{ 8800, { 0, 0 }, { 292, 980 }, 5 }, //< HomeEasyV1A
+	{ 8912, { 172, 2568 } , { 220, 1304 }, 5 }, //< HomeEasyV2A
 };
 
 Transmitter::Transmitter(int pin) {
@@ -84,7 +85,7 @@ void Transmitter::processLine(Print *output) {
 			}
 
 			switch (token[0]) {
-			case '0':
+			case '0': // bits
 			case '1':
 				if (value <= MAX_BIT_US) {
 					bitTime[token[0] - '0'] = value;
@@ -92,9 +93,30 @@ void Transmitter::processLine(Print *output) {
 				}
 				break;
 
-			case 'R':
+			case 'H': // preamble high
+				if (value <= MAX_PREAMBLE_US) {
+						preambleTime[0] = value;
+						configured = true;
+				}
+				break;
+
+			case 'L': // preamble low
+				if (value <= MAX_PREAMBLE_US) {
+						preambleTime[1] = value;
+						configured = true;
+				}
+				break;
+
+			case 'R': // repeat
 				if (value > 0 && value <= MAX_REPEAT) {
 					repeat = value;
+					configured = true;
+				}
+				break;
+
+			case 'P': // pause
+				if (value <= MAX_PAUSE_US) {
+					prePauseTime = interPauseTime = postPauseTime = value;
 					configured = true;
 				}
 				break;
@@ -120,9 +142,11 @@ void Transmitter::processLine(Print *output) {
 				}
 				break;
 
-			case 'P': // preset
+			case 'S': // preset
 				if (value < sizeof(PRESETS) / sizeof(PRESETS[0])) {
 					prePauseTime = interPauseTime = postPauseTime = PRESETS[value].pauseTime;
+					preambleTime[0] = PRESETS[value].preambleTime[0];
+					preambleTime[1] = PRESETS[value].preambleTime[1];
 					bitTime[0] = PRESETS[value].bitTime[0];
 					bitTime[1] = PRESETS[value].bitTime[1];
 					repeat = PRESETS[value].repeat;
@@ -160,7 +184,11 @@ void Transmitter::outputConfiguration(Print *output) {
 	output->print(interPauseTime);
 	output->print(",postPauseTime: ");
 	output->print(postPauseTime);
-	output->print(",zeroBitDuration: ");
+	output->print(",preambleTime: [");
+	output->print(preambleTime[0]);
+	output->print(',');
+	output->print(preambleTime[1]);
+	output->print("],zeroBitDuration: ");
 	output->print(bitTime[0]);
 	output->print(",oneBitDuration: ");
 	output->print(bitTime[1]);
@@ -180,9 +208,9 @@ void Transmitter::transmit(const Code &code) {
 			pausePin(interPauseTime);
 		}
 
-		if (code.preambleTime[0] || code.preambleTime[1]) {
-			togglePin(code.preambleTime[0]);
-			togglePin(code.preambleTime[1]);
+		if (preambleTime[0] || preambleTime[1]) {
+			togglePin(preambleTime[0]);
+			togglePin(preambleTime[1]);
 		}
 
 		for (uint_fast8_t i = 0; i < code.messageLength; i++) {

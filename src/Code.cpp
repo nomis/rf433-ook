@@ -30,43 +30,13 @@ Code::~Code() {
 
 }
 
-Code::Code(char *message) {
-	unsigned int messageParts = 0;
+Code::Code(const char *message) {
 	bool trailing = false;
 
 	valid = false;
 	messageLength = 0;
 	memset(this->message, 0, sizeof(this->message));
 
-	// Find preamble time
-	preambleTime[0] = 0;
-	preambleTime[1] = 0;
-	for (char *parse = message, *saveptr = nullptr, *token;
-			(token = strtok_r(parse, "-", &saveptr)) != nullptr;
-			parse = nullptr) {
-		if (messageParts < 2) {
-			if (strlen(token) > 0) {
-				char *endptr = nullptr;
-				unsigned long value = strtoul(token, &endptr, 10);
-
-				if (strlen(endptr) == 0) {
-					if (value <= Transmitter::MAX_PREAMBLE_US) {
-						preambleTime[messageParts] = value;
-					}
-				}
-			}
-		} else if (messageParts >= 3) {
-			return;
-		}
-		message = token;
-		messageParts++;
-	}
-
-	if (messageParts > 1 && (preambleTime[0] == 0 || preambleTime[1] == 0)) {
-		return;
-	}
-
-	// Encode message
 	for (uint_fast8_t i = 0; message[i] != 0; i++) {
 		if ((message[i] >= '0' && message[i] <= '9') || (message[i] >= 'A' && message[i] <= 'F')) {
 			uint8_t value = message[i] < 'A' ? (message[i] - '0') : ((message[i] - 'A') + 10);
@@ -108,6 +78,8 @@ Code::Code(char *message) {
 	duration = 0;
 	prePauseTime = 0;
 	postPauseTime = 0;
+	preambleTime[0] = 0;
+	preambleTime[1] = 0;
 	bitTotalTime[0] = 0;
 	bitTotalTime[1] = 0;
 	prePauseStandalone = true;
@@ -344,46 +316,48 @@ size_t Code::printTo(Print &p) const {
 	messageCountBits(zeroBitCount, oneBitCount);
 
 	n += p.print("{code: \"");
-	if (preambleTime[0] || preambleTime[1]) {
-		n += p.print(preambleTime[0]);
-		n += p.print('-');
-		n += p.print(preambleTime[1]);
-		n += p.print('-');
-	}
 	n += p.print(code);
 	if (packedTrailingBits != 0) {
 		n += p.print('+');
 		n += p.print(packedTrailingBits);
 	}
-	n += p.print("\",prePause: \"");
-	n += p.print(prePauseStandalone ? "standalone" : "following");
-	n += p.print("\",postPause: \"");
-	n += p.print(postPausePresent ? "present" : "missing");
 	n += p.print('\"');
-
+	if (preambleTime[0] || preambleTime[1]) {
+		n += p.print(",preamble: [");
+		n += p.print(preambleTime[0]);
+		n += p.print(',');
+		n += p.print(preambleTime[1]);
+		n += p.print(']');
+	}
 	if (duration) {
 		n += p.print(",duration: ");
 		n += p.print(duration);
-	}
 
-	if (prePauseTime) {
-		n += p.print(",prePauseTime: ");
-		n += p.print(prePauseTime);
-	}
+		n += p.print(",prePause: \"");
+		n += p.print(prePauseStandalone ? "standalone" : "following");
+		n += p.print("\",postPause: \"");
+		n += p.print(postPausePresent ? "present" : "missing");
+		n += p.print('\"');
 
-	if (postPauseTime) {
-		n += p.print(",postPauseTime: ");
-		n += p.print(postPauseTime);
-	}
+		if (prePauseTime) {
+			n += p.print(",prePauseTime: ");
+			n += p.print(prePauseTime);
+		}
 
-	if (bitTotalTime[0] && zeroBitCount) {
-		n += p.print(",zeroBitDuration: ");
-		n += p.print(bitTotalTime[0] / zeroBitCount);
-	}
+		if (postPauseTime) {
+			n += p.print(",postPauseTime: ");
+			n += p.print(postPauseTime);
+		}
 
-	if (bitTotalTime[1] && oneBitCount) {
-		n += p.print(",oneBitDuration: ");
-		n += p.print(bitTotalTime[1] / oneBitCount);
+		if (bitTotalTime[0] && zeroBitCount) {
+			n += p.print(",zeroBitDuration: ");
+			n += p.print(bitTotalTime[0] / zeroBitCount);
+		}
+
+		if (bitTotalTime[1] && oneBitCount) {
+			n += p.print(",oneBitDuration: ");
+			n += p.print(bitTotalTime[1] / oneBitCount);
+		}
 	}
 
 	if (postPausePresent) {

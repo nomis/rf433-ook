@@ -35,8 +35,9 @@ public:
 
 protected:
 	struct Preset {
-		unsigned long pauseTime;
-		unsigned long bitTime[2];
+		unsigned int pauseTime;
+		unsigned int preambleTime[2];
+		unsigned int bitTime[2];
 		unsigned int repeat;
 	};
 
@@ -58,10 +59,11 @@ protected:
 	bool valid = true;
 
 	int pin;
-	unsigned long prePauseTime = 10000;
-	unsigned long interPauseTime = 10000;
-	unsigned long postPauseTime = 10000;
-	unsigned long bitTime[2] = { 300, 900 };
+	unsigned int prePauseTime = 10000;
+	unsigned int interPauseTime = 10000;
+	unsigned int postPauseTime = 10000;
+	unsigned int preambleTime[2] = { 0, 0 };
+	unsigned int bitTime[2] = { 300, 900 };
 	unsigned int repeat = 5;
 
 private:
