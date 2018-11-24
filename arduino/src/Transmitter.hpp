@@ -26,7 +26,7 @@
 
 class Transmitter {
 public:
-	Transmitter(int pin);
+	Transmitter(int pin, bool silent);
 	virtual ~Transmitter();
 	void init() const;
 	void processInput(Stream *console);
@@ -58,6 +58,7 @@ protected:
 	bool valid = true;
 
 	int pin;
+	bool silent;
 	unsigned int prePauseTime = 10000;
 	unsigned int interPauseTime = 10000;
 	unsigned int postPauseTime = 10000;

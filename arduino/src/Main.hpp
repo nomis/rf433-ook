@@ -33,6 +33,7 @@ constexpr unsigned long CONSOLE_BAUD_RATE = 115200;
 constexpr bool RX_ENABLED = true;
 constexpr int RX_PIN = 2;
 constexpr bool TX_ENABLED = true;
+constexpr bool TX_SILENT = false;
 constexpr int TX_PIN = 10;
 
 #endif

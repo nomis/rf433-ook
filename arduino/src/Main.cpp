@@ -43,7 +43,7 @@ static void checkFreeMemory() {
 	}
 }
 
-Transmitter transmitter(TX_PIN);
+Transmitter transmitter(TX_PIN, TX_SILENT);
 
 void setup() {
 	if (RX_ENABLED) {

@@ -29,8 +29,9 @@ const Transmitter::Preset Transmitter::PRESETS[] = {
 	{ /* 10212 */ 8912, { /* 216 */ 172, /* 2560 */ 2582 }, { /* 240 */ 220, /* 1300 */ 1304 }, 5 }, //< HomeEasyV3
 };
 
-Transmitter::Transmitter(int pin) {
+Transmitter::Transmitter(int pin, bool silent) {
 	this->pin = pin;
+	this->silent = silent;
 }
 
 Transmitter::~Transmitter() {
@@ -165,8 +166,10 @@ void Transmitter::processLine(Print *output) {
 			}
 
 			if (code.isValid()) {
-				output->print("transmit: ");
-				output->println(code);
+				if (!silent) {
+					output->print("transmit: ");
+					output->println(code);
+				}
 
 				transmit(code);
 			}
@@ -179,24 +182,26 @@ void Transmitter::processLine(Print *output) {
 }
 
 void Transmitter::outputConfiguration(Print *output) {
-	output->print("config: {");
-	output->print("prePauseTime: ");
-	output->print(prePauseTime);
-	output->print(",interPauseTime: ");
-	output->print(interPauseTime);
-	output->print(",postPauseTime: ");
-	output->print(postPauseTime);
-	output->print(",preambleTime: [");
-	output->print(preambleTime[0]);
-	output->print(',');
-	output->print(preambleTime[1]);
-	output->print("],zeroBitDuration: ");
-	output->print(bitTime[0]);
-	output->print(",oneBitDuration: ");
-	output->print(bitTime[1]);
-	output->print(",repeat: ");
-	output->print(repeat);
-	output->println('}');
+	if (!silent) {
+		output->print("config: {");
+		output->print("prePauseTime: ");
+		output->print(prePauseTime);
+		output->print(",interPauseTime: ");
+		output->print(interPauseTime);
+		output->print(",postPauseTime: ");
+		output->print(postPauseTime);
+		output->print(",preambleTime: [");
+		output->print(preambleTime[0]);
+		output->print(',');
+		output->print(preambleTime[1]);
+		output->print("],zeroBitDuration: ");
+		output->print(bitTime[0]);
+		output->print(",oneBitDuration: ");
+		output->print(bitTime[1]);
+		output->print(",repeat: ");
+		output->print(repeat);
+		output->println('}');
+	}
 }
 
 void Transmitter::transmit(const Code &code) {
