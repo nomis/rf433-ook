@@ -1,6 +1,6 @@
 /*
  * rf433-ook - Arduino 433MHz OOK Receiver/Transmitter
- * Copyright 2017  Simon Arlott
+ * Copyright 2017-2018  Simon Arlott
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ protected:
 	static constexpr unsigned long MAX_PREAMBLE_US = 10000;
 	static constexpr unsigned long MAX_BIT_US = 5000;
 	static constexpr unsigned long MAX_PAUSE_US = 50000;
-	static constexpr unsigned long MAX_REPEAT = 20;
+	static constexpr unsigned long MAX_REPEAT = 100;
 
 	static const Preset PRESETS[];
 
