@@ -42,7 +42,7 @@ public:
 	static constexpr unsigned long MIN_ONE_DURATION = 4;
 	static constexpr unsigned long MAX_ONE_DURATION = 12;
 
-	// Relative duration of the 1-bit compared to the 0-bit for a preabmle
+	// Relative duration of the 1-bit compared to the 0-bit for a preamble
 	static constexpr unsigned long PREAMBLE_RELATIVE_DURATION = 64;
 
 	// Sample bits until at least this many (to get the best average duration)
@@ -72,14 +72,14 @@ protected:
 #endif
 
 	Code codes[MAX_CODES];
-	uint_fast8_t codeReadIndex = 0;
-	uint_fast8_t codeWriteIndex = 0;
+	unsigned int codeReadIndex = 0;
+	unsigned int codeWriteIndex = 0;
 
 private:
 	static void interruptHandler();
 	static void addBit(Code *code, uint8_t bit, const unsigned long &duration);
 	void addCode();
-} __attribute__((packed));
+};
 
 extern Receiver receiver;
 

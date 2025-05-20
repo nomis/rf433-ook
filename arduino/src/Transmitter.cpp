@@ -210,7 +210,7 @@ void Transmitter::transmit(const Code &code) {
 
 	pausePin(prePauseTime);
 
-	for (uint_fast8_t n = 0; n < repeat; n++) {
+	for (unsigned int n = 0; n < repeat; n++) {
 		if (n > 0) {
 			pausePin(interPauseTime);
 		}
@@ -220,7 +220,7 @@ void Transmitter::transmit(const Code &code) {
 			togglePin(preambleTime[1]);
 		}
 
-		for (uint_fast8_t i = 0; i < code.messageLength; i++) {
+		for (unsigned int i = 0; i < code.messageLength; i++) {
 			uint8_t bit = code.message[i / 8] & (0x80 >> (i & 0x7)) ? 1 : 0;
 
 			togglePin(bitTime[bit]);

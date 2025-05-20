@@ -22,6 +22,7 @@
 #include "Receiver.hpp"
 #include "Transmitter.hpp"
 
+#ifdef ARDUINO_AVR_MICRO
 static int freeMemory() {
 	extern int __heap_start, *__brkval;
 	int v;
@@ -42,6 +43,7 @@ static void checkFreeMemory() {
 		lowMemoryWatermark = currentFreeMemory;
 	}
 }
+#endif
 
 Transmitter transmitter(TX_PIN, TX_SILENT);
 
@@ -59,7 +61,9 @@ void setup() {
 
 void loop() {
 	if (*console) {
+#ifdef ARDUINO_AVR_MICRO
 		checkFreeMemory();
+#endif
 
 		if (RX_ENABLED) {
 			static unsigned long last = millis();

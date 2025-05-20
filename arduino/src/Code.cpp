@@ -39,7 +39,7 @@ Code::Code(const char *message) {
 	messageLength = 0;
 	memset(this->message, 0, sizeof(this->message));
 
-	for (uint_fast8_t i = 0; message[i] != 0; i++) {
+	for (unsigned int i = 0; message[i] != 0; i++) {
 		if ((message[i] >= '0' && message[i] <= '9') || (message[i] >= 'A' && message[i] <= 'F')) {
 			uint8_t value = message[i] < 'A' ? (message[i] - '0') : ((message[i] - 'A') + 10);
 
@@ -119,7 +119,7 @@ bool Code::finalise() {
 		bitTime[0] = zeroBitCount > 0 ? (bitTotalTime[0] / zeroBitCount) : 0;
 		bitTime[1] = oneBitCount > 0 ? (bitTotalTime[1] / oneBitCount) : 0;
 
-		for (uint_fast8_t i = 0; i < 2; i++) {
+		for (unsigned int i = 0; i < 2; i++) {
 			if (preambleTime[i] < bitTime[0] * Receiver::MIN_ZERO_DURATION / Receiver::DIVISOR) {
 				preambleType[i] = PreambleType::SHORT;
 			} else if (preambleTime[i] > bitTime[1] * Receiver::MAX_ONE_DURATION / Receiver::DIVISOR) {
@@ -154,7 +154,7 @@ bool Code::finalise() {
 				return false;
 			}
 		} else if (preambleType[0] != PreambleType::MEDIUM && preambleType[1] != PreambleType::MEDIUM) {
-			for (uint_fast8_t i = 0; i < 2; i++) {
+			for (unsigned int i = 0; i < 2; i++) {
 				if (preambleType[i] == PreambleType::SHORT) {
 					preambleType[i] = PreambleType::ZERO;
 				} else if (preambleType[i] == PreambleType::LONG) {
@@ -184,7 +184,7 @@ bool Code::finalise() {
 		bitTotalTime[preambleBits[1]] += preambleTime[1];
 
 		// Move all the bits up
-		for (uint_fast8_t i = sizeof(message) - 1; i > 0; i--) {
+		for (unsigned int i = sizeof(message) - 1; i > 0; i--) {
 			message[i] = ((message[i - 1] << 6) & 0xC0) | ((message[i] >> 2) & 0x3F);
 		}
 		message[0] >>= 2;
@@ -207,7 +207,7 @@ bool Code::finalise() {
 	bool values3bit[1 << 3] = { false };
 	bool values4bit[1 << 4] = { false };
 
-	for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+	for (unsigned int i = 0; i < (messageLength >> 2); i++) {
 		values1bit[messageValueAt(i) >> 3] = true;
 		values2bit[messageValueAt(i) >> 2] = true;
 		values3bit[messageValueAt(i) >> 1] = true;
@@ -280,7 +280,7 @@ static char toHex(uint8_t value) {
 }
 
 void Code::messageAsString(String &code, char &packedTrailingBits) const {
-	for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+	for (unsigned int i = 0; i < (messageLength >> 2); i++) {
 		code += toHex(messageValueAt(i));
 	}
 
@@ -301,11 +301,11 @@ void Code::messageCountBits(unsigned int &zeroBitCount, unsigned int &oneBitCoun
 	zeroBitCount = 0;
 	oneBitCount = 0;
 
-	for (uint_fast8_t i = 0; i < (messageLength >> 2); i++) {
+	for (unsigned int i = 0; i < (messageLength >> 2); i++) {
 		value = messageValueAt(i);
 
-		for (uint_fast8_t bit = 0; bit < 4; bit++) {
-			if (value & (1 << bit)) {
+		for (unsigned int bit = 0; bit < 4; bit++) {
+			if (value & (1U << bit)) {
 				oneBitCount++;
 			} else {
 				zeroBitCount++;
@@ -314,8 +314,8 @@ void Code::messageCountBits(unsigned int &zeroBitCount, unsigned int &oneBitCoun
 	}
 
 	value = messageTrailingValue();
-	for (uint_fast8_t bit = 0; bit < 3; bit++) {
-		if (value & (1 << bit)) {
+	for (unsigned int bit = 0; bit < 3; bit++) {
+		if (value & (1U << bit)) {
 			oneBitCount++;
 		} else {
 			zeroBitCount++;
@@ -523,7 +523,7 @@ size_t Code::printHomeEasyV2(bool &first, const String &code, Print &p) const {
 		goto out;
 	}
 
-	for (uint_fast8_t i = 0; i <= 31; i++) {
+	for (unsigned int i = 0; i <= 31; i++) {
 		group |= (uint32_t)(uint8_t)(decoded[11 + (31 - i)] - '0') << i;
 	}
 
@@ -541,7 +541,7 @@ size_t Code::printHomeEasyV2(bool &first, const String &code, Print &p) const {
 		}
 	}
 
-	for (uint_fast8_t i = 0; i <= 6; i++) {
+	for (unsigned int i = 0; i <= 6; i++) {
 		device |= (uint32_t)(uint8_t)(decoded[51 + (6 - i)] - '0') << i;
 	}
 
@@ -601,7 +601,7 @@ size_t Code::printHomeEasyV3(bool &first, const String &code, Print &p) const {
 
 	if (decoded.substring(0, 26).indexOf('2') == -1) {
 		group = 0;
-		for (uint_fast8_t i = 0; i <= 25; i++) {
+		for (unsigned int i = 0; i <= 25; i++) {
 			group |= (uint32_t)(uint8_t)(decoded[25 - i] - '0') << i;
 		}
 	}

@@ -69,6 +69,6 @@ protected:
 private:
 	uint8_t state;
 	unsigned long start;
-} __attribute__((packed));
+};
 
 #endif

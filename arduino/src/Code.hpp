@@ -40,7 +40,7 @@ public:
 	static constexpr uint8_t MAX_LENGTH = 48 * 4 - 2;
 
 	uint8_t message[(MAX_LENGTH + 7 + 2) / 8]; // Add 2 bits extra space for the preamble bits during finalisation
-	uint8_t messageLength;
+	unsigned int messageLength;
 
 protected:
 	void setValid(bool valid);
@@ -68,6 +68,6 @@ protected:
 #ifdef TRACE_BITS
 	uint8_t traceBitTimes[MAX_LENGTH];
 #endif
-} __attribute__((packed));
+};
 
 #endif

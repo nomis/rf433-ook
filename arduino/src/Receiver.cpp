@@ -253,7 +253,7 @@ retry:
 					swap(code->bitTotalTime);
 
 					// Invert previously stored bits
-					for (uint_fast8_t i = 0; i < ((code->messageLength + 7) >> 3); i++) {
+					for (unsigned int i = 0; i < ((code->messageLength + 7) >> 3); i++) {
 						code->message[i] = ~code->message[i];
 					}
 
@@ -416,7 +416,7 @@ void Receiver::printCode(Print *output) {
 		output->print("# -1\t");
 		output->println(code.preambleTime[1]);
 
-		for (uint_fast8_t i = 0; i < code.messageLength; i++) {
+		for (unsigned int i = 0; i < code.messageLength; i++) {
 			output->print("# ");
 			output->print(i);
 			output->print('\t');
