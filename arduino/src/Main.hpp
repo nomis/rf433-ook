@@ -35,6 +35,8 @@ constexpr bool RX_ENABLED = true;
 constexpr int RX_PIN = 2;
 #elif defined(ARDUINO_AVR_UNO)
 constexpr int RX_PIN = 2;
+#elif defined(ARDUINO_AVR_MEGA2560)
+constexpr int RX_PIN = 2;
 #elif defined(ARDUINO_RASPBERRY_PI_PICO)
 constexpr int RX_PIN = 9;
 #elif defined(ARDUINO_ESP32C3_DEV)
@@ -45,6 +47,8 @@ constexpr bool TX_SILENT = false;
 #if defined(ARDUINO_AVR_MICRO)
 constexpr int TX_PIN = 10;
 #elif defined(ARDUINO_AVR_UNO)
+constexpr int TX_PIN = 10;
+#elif defined(ARDUINO_AVR_MEGA2560)
 constexpr int TX_PIN = 10;
 #elif defined(ARDUINO_RASPBERRY_PI_PICO)
 constexpr int TX_PIN = 22;
